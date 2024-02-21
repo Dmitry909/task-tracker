@@ -1,0 +1,34 @@
+plantuml
+
+@startuml C4 Containers
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/latest/C4_Container.puml
+
+Person(user, "Пользователь", "Человек, использующий трекер задач.")
+
+System_Boundary(main_service_with_db, "") {
+    Container(main_service, "Главный сервис", "Python", "Отвечает за клиентское API, регистрацию и аутентификацию пользователей")
+    ContainerDb(users_db, "БД пользователей", "PostgreSQL")
+}
+
+Container(likes_and_views_brocker, "Брокер событий лайков и просмотров", "RabbitMQ")
+
+System_Boundary(statistics_service_with_db, "") {
+    Container(statistics_service, "Сервис статистики", "Python")
+    ContainerDb(statistics_db, "БД статистики", "ClickHouse")
+}
+
+System_Boundary(tasks_service_with_db, "") {
+    Container(tasks_service, "Сервис задач и комментариев", "Python")
+    ContainerDb(tasks_db, "БД задач и комментариев", "PostgreSQL")
+}
+
+Rel(user, main_service, "Использует интерфейс веб-приложения", "REST")
+Rel(main_service, users_db, "Запись и чтение")
+Rel(main_service, tasks_service, "Запросы по задачам и комментариям", "gRPC")
+Rel(main_service, likes_and_views_brocker, "События по лайкам и просмотрам")
+Rel(likes_and_views_brocker, statistics_service, "События по лайкам и просмотрам")
+Rel(main_service, statistics_service, "Запросы по задачам и комментариям", "gRPC")
+Rel(tasks_service, tasks_db, "Запись и чтение")
+Rel(statistics_service, statistics_db, "Запись и чтение")
+
+@enduml
