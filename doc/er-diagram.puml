@@ -1,0 +1,46 @@
+@startuml
+
+entity "User" as user {
+  + user_id : int64
+  --
+  username : string
+  password: string
+}
+
+entity "Task" as task {
+  + task_id : int64
+  --
+  last_edit_time: datetime
+  author_id: int64
+  title: string
+  content: string
+  labes: list[LabelEnum]
+  task_stats_id: int64
+
+  optional executor_id: int64
+}
+
+entity "Task Stats" as taskStats {
+  + task_stats_id : int64
+  --
+  task_id: int64
+  liked_by_users: list[int64]
+  viewed_by_users: list[int64]
+}
+
+entity "Comment" as comment {
+  + comment_id : int64
+  --
+  creation_time: datetime
+  content: string
+  author_id: int64
+  parent_id: int64
+  is_parent_task: bool
+}
+
+user ||--o{ task : "Создаёт таску"
+user ||--o{ comment : "Пишет коммент"
+task ||--o{ comment : "Содержит несколько комментов"
+task ||--o{ taskStats : "Содержит id task stats"
+
+@enduml
