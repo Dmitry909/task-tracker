@@ -4,11 +4,7 @@
 
 Person(user, "Пользователь", "Человек, использующий трекер задач.")
 System(lk, "Личный кабинет")
-System(statistics_service, "Сервис статистики")
-System(tasks_service, "Сервис задач и комментариев")
 
 Rel(user, lk, "Отправляет запросы на получение постов, отправляет новые посты, комментарии, лайки")
-Rel(lk, statistics_service, " ")
-Rel(lk, tasks_service, " ")
 
 @enduml
