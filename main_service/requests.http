@@ -1,0 +1,64 @@
+###
+POST http://127.0.0.1:5000/create-user
+Content-Type: application/json
+
+{
+    "username": "alex",
+    "password": "alex1990"
+}
+
+###
+POST http://127.0.0.1:5000/login
+Content-Type: application/json
+
+{
+    "username": "doesn't exist",
+    "password": "password"
+}
+
+
+
+### empty body
+POST http://127.0.0.1:5000/create-user
+Content-Type: application/json
+
+{
+}
+
+### corrupted body 1
+POST http://127.0.0.1:5000/create-user
+Content-Type: application/json
+
+qwerty
+
+### corrupted body 2
+POST http://127.0.0.1:5000/create-user
+Content-Type: application/json
+
+{abc}
+
+### no password
+POST http://127.0.0.1:5000/create-user
+Content-Type: application/json
+
+{
+    "username": "alex_no_password"
+}
+
+### no username
+POST http://127.0.0.1:5000/create-user
+Content-Type: application/json
+
+{
+    "password": "no_username"
+}
+
+### excess field
+POST http://127.0.0.1:5000/create-user
+Content-Type: application/json
+
+{
+    "username": "alex",
+    "password": "alex1990",
+    "excess_field": "123"
+}

@@ -1,0 +1,7 @@
+FROM python:3.10
+
+RUN pip install flask jwt flask_sqlalchemy
+
+COPY main.py /
+
+CMD ["python3", "/main.py"]
