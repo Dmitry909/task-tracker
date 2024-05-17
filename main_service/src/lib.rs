@@ -103,8 +103,39 @@ pub struct UpdateUserDataRequest {
     phone_number: Option<String>,
 }
 
-fn check_login_password(request: &SignupRequest) -> bool {
-    if request.login.len() < 1 || request.login.len() > 20 {
+fn check_login(login: &String) -> bool {
+    if login.len() < 2 || login.len() > 20 {
+        return false;
+    }
+    if !login
+        .chars()
+        .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit())
+    {
+        return false;
+    }
+    return true;
+}
+
+fn check_password(password: &String) -> bool {
+    if password.len() < 8 || password.len() > 30 {
+        return false;
+    }
+    if !password.chars().all(|c| c.is_ascii()) {
+        return false;
+    }
+    if !password.chars().any(|c| c.is_ascii_lowercase()) {
+        return false;
+    }
+    if !password.chars().any(|c| c.is_ascii_uppercase()) {
+        return false;
+    }
+    if !password.chars().any(|c| c.is_ascii_digit()) {
+        return false;
+    }
+    if !password
+        .chars()
+        .any(|c| !c.is_ascii_lowercase() && !c.is_ascii_uppercase() && !c.is_ascii_digit())
+    {
         return false;
     }
     return true;
@@ -114,8 +145,19 @@ async fn signup(
     State(state): State<Arc<AppState>>,
     Json(input_payload): Json<SignupRequest>,
 ) -> Response {
-    if !check_login_password(&input_payload) {
-        return (StatusCode::NOT_ACCEPTABLE, "Login or password is incorrect").into_response();
+    if !check_login(&input_payload.login) {
+        return (
+            StatusCode::NOT_ACCEPTABLE,
+            "Login must be from 2 to 20 symbols and consist only of ascii lowercase letters and digist.",
+        )
+            .into_response();
+    }
+    if !check_password(&input_payload.password) {
+        return (
+            StatusCode::NOT_ACCEPTABLE,
+            "Password must be from 8 to 30 symbols, consist only of ascii symbols and contain at least one lowercase, one uppercase and one digit.",
+        )
+            .into_response();
     }
 
     let query_result = sqlx::query_as!(
