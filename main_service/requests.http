@@ -1,5 +1,5 @@
 ###
-POST http://127.0.0.1:5000/create-user
+POST http://127.0.0.1:5000/create_user
 Content-Type: application/json
 
 {
@@ -16,49 +16,21 @@ Content-Type: application/json
     "password": "password"
 }
 
-
-
-### empty body
-POST http://127.0.0.1:5000/create-user
-Content-Type: application/json
-
-{
-}
-
-### corrupted body 1
-POST http://127.0.0.1:5000/create-user
-Content-Type: application/json
-
-qwerty
-
-### corrupted body 2
-POST http://127.0.0.1:5000/create-user
-Content-Type: application/json
-
-{abc}
-
-### no password
-POST http://127.0.0.1:5000/create-user
-Content-Type: application/json
-
-{
-    "username": "alex_no_password"
-}
-
-### no username
-POST http://127.0.0.1:5000/create-user
-Content-Type: application/json
-
-{
-    "password": "no_username"
-}
-
-### excess field
-POST http://127.0.0.1:5000/create-user
+###
+POST http://127.0.0.1:5000/login
 Content-Type: application/json
 
 {
     "username": "alex",
-    "password": "alex1990",
-    "excess_field": "123"
+    "password": "alex1990"
+}
+
+###
+PUT http://127.0.0.1:5000/update_user_data
+Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6MSwiZXhwIjoxNzEwNTM3NDkxfQ.Pts2xE49XF7VkLIJnhKGLtKD_xvsfs96AJz27z2L-Yk
+Content-Type: application/json
+
+{
+    "firstname": "qqqqqqqqqqqqqqqqqqqq",
+    "lastname": "www"
 }

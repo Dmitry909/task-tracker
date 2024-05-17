@@ -1,6 +1,6 @@
 FROM python:3.10
 
-RUN pip install flask jwt flask_sqlalchemy
+RUN pip install flask jwt flask_sqlalchemy hashlib datetime sqlite
 
 COPY main.py /
 

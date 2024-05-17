@@ -1,0 +1,23 @@
+[package]
+name = "main_service"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+chrono = "0.4.37"
+jsonwebtoken = "9.3.0"
+axum = { version = "0.7.4" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0.68"
+tokio = { version = "1.0", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tower = { version = "0.4.13", features = ["util"] }
+mime = "0.3.17"
+http-body-util = "0.1.0"
+sha2 = "0.10.0"
+hex = "0.4.3"
+sqlx = { version = "0.6", features = ["postgres", "runtime-tokio-rustls"] }
+serial_test = { version = "0.4.0" }
