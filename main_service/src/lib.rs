@@ -70,8 +70,8 @@ pub async fn create_app(users_db_url: &str, need_to_clear: bool) -> Router {
     let shared_state = Arc::new(AppState { pool });
     Router::new()
         .route("/signup", post(signup))
-        // .route("/login", post(login))
-        // .route("/update_user_data", put(update_user_data))
+        .route("/login", post(login))
+        .route("/update_user_data", put(update_user_data))
         .with_state(shared_state)
 }
 
@@ -173,4 +173,44 @@ async fn signup(
         Ok(_) => (StatusCode::CREATED).into_response(),
         Err(_) => (StatusCode::CONFLICT, "Username exists").into_response(),
     }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct TokenData {
+    username: String,
+    exp: usize,
+}
+
+fn generate_token(username: &String) -> String {
+    let secret = b"my_secret_key_d47fjs&w3)wj";
+    let token_data = TokenData {
+        username: username.clone(),
+        exp: (Local::now() + chrono::Duration::hours(24)).timestamp() as usize,
+    };
+    let encoding_key = EncodingKey::from_secret(secret);
+    encode(&Header::default(), &token_data, &encoding_key).unwrap()
+}
+
+fn decode_token(
+    token: &str,
+) -> Result<jsonwebtoken::TokenData<TokenData>, jsonwebtoken::errors::Error> {
+    let secret = b"my_secret_key_d47fjs&w3)wj";
+    return decode::<TokenData>(
+        token,
+        &DecodingKey::from_secret(secret),
+        &Validation::new(Algorithm::HS256),
+    );
+}
+
+async fn login(Json(input_payload): Json<LoginRequest>) -> Response {
+    let token = generate_token(&input_payload.login);
+    (StatusCode::OK, [("Authorization", token)]).into_response()
+}
+
+async fn update_user_data(
+    State(state): State<Arc<AppState>>,
+    Json(input_payload): Json<UpdateUserDataRequest>,
+) -> Response {
+    // TODO
+    ().into_response()
 }
