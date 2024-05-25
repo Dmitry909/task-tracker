@@ -1,6 +1,6 @@
 use axum::{
     body::{self, Bytes},
-    extract::{DefaultBodyLimit, Query, Request, State},
+    extract::{DefaultBodyLimit, FromRef, Query, Request, State},
     http::{header, request, response, HeaderMap, HeaderValue, StatusCode},
     response::{IntoResponse, Response},
     routing::{delete, get, post, put},
@@ -49,7 +49,8 @@ struct AppState {
 
 #[derive(Debug)]
 pub struct UsersModel {
-    login: String,
+    id: u64,
+    username: String,
     password_hash: String,
     first_name: Option<String>,
     second_name: Option<String>,
@@ -89,8 +90,8 @@ pub struct LoginRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Date {
-    day: i32,
-    month: i32,
+    day: u32,
+    month: u32,
     year: i32,
 }
 
@@ -162,7 +163,7 @@ async fn signup(
 
     let query_result = sqlx::query_as!(
         UsersModel,
-        "INSERT INTO users VALUES ($1, $2)",
+        "INSERT INTO users (username, password_hash) VALUES ($1, $2)",
         input_payload.login,
         get_hash(&input_payload.password),
     )
@@ -209,8 +210,69 @@ async fn login(Json(input_payload): Json<LoginRequest>) -> Response {
 
 async fn update_user_data(
     State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
     Json(input_payload): Json<UpdateUserDataRequest>,
 ) -> Response {
-    // TODO
+    if !headers.contains_key("Authorization") {
+        return (StatusCode::UNAUTHORIZED, "Token is missing").into_response();
+    }
+    let token = headers["Authorization"].to_str().unwrap();
+    let decoded_token = match decode_token(token) {
+        Ok(c) => c.claims,
+        Err(_) => {
+            return (StatusCode::UNAUTHORIZED, "Invalid token").into_response();
+        }
+    };
+
+    let query: String = "UPDATE users SET ".to_owned();
+    match input_payload.first_name {
+        Some(first_name) => {
+            query += &format!("first_name={}, ", first_name);
+        }
+        None => {}
+    };
+    match input_payload.second_name {
+        Some(second_name) => {
+            query += &format!("second_name={}, ", second_name);
+        }
+        None => {}
+    };
+    match input_payload.birthday {
+        Some(birthday) => {
+            let date_opt = NaiveDate::from_ymd_opt(birthday.year, birthday.month, birthday.day);
+            match date_opt {
+                Some(date) => {
+                    query += &format!("birthday={}, ", date);
+                },
+                None => {
+                    return (StatusCode::NOT_ACCEPTABLE, "Incorrect birthdate").into_response();
+                }
+            };
+        }
+        None => {}
+    };
+    match input_payload.email {
+        Some(email) => {
+            query += &format!("email={}, ", email);
+        }
+        None => {}
+    };
+    match input_payload.phone_number {
+        Some(phone_number) => {
+            query += &format!("phone_number={}, ", phone_number);
+        }
+        None => {}
+    };
+
+    let query_result = sqlx::query_as!(
+        UsersModel,
+        "UPDATE users SET active_token='' WHERE username=$1 RETURNING *",
+        &decoded_token.username,
+    )
+    .fetch_optional(&state.pool)
+    .await;
+
+    // 1) проверить токен
+    // 2) если верный то обновить
     ().into_response()
 }

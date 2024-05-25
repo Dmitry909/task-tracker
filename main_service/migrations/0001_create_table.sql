@@ -1,6 +1,7 @@
 CREATE TABLE IF NOT EXISTS users (
-    login varchar(20) PRIMARY KEY NOT NULL,
-    password_hash varchar(1000) NOT NULL,
+    id bigserial PRIMARY KEY,
+    username varchar UNIQUE NOT NULL,
+    password_hash varchar NOT NULL,
     first_name varchar(30),
     second_name varchar(30),
     birthday date,
