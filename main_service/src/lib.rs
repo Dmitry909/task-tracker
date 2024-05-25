@@ -1,27 +1,18 @@
 use axum::{
-    body::{self, Bytes},
-    extract::{DefaultBodyLimit, FromRef, Query, Request, State},
-    http::{header, request, response, HeaderMap, HeaderValue, StatusCode},
+    extract::State,
+    http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
-    routing::{delete, get, post, put},
-    Form, Json, Router,
+    routing::{post, put},
+    Json, Router,
 };
+use chrono::Local;
 use chrono::NaiveDate;
-use chrono::{Duration, Local};
 use hex;
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
-use serde::{de, forward_to_deserialize_any, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use sqlx::{database, postgres::PgPoolOptions, query, query_as, Pool, Postgres};
-use std::{
-    borrow::Borrow,
-    collections::HashMap,
-    fs::{self, File},
-    io::{Read, Write},
-    slice::RSplitN,
-    str,
-    sync::{Arc, RwLock},
-};
+use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
+use std::{str, sync::Arc};
 
 pub async fn create_pool(database_url: &str) -> Pool<Postgres> {
     match PgPoolOptions::new().connect(&database_url).await {
@@ -224,16 +215,16 @@ async fn update_user_data(
         }
     };
 
-    let query: String = "UPDATE users SET ".to_owned();
+    let mut set_vector = Vec::new();
     match input_payload.first_name {
         Some(first_name) => {
-            query += &format!("first_name={}, ", first_name);
+            set_vector.push(format!("first_name='{}', ", first_name));
         }
         None => {}
     };
     match input_payload.second_name {
         Some(second_name) => {
-            query += &format!("second_name={}, ", second_name);
+            set_vector.push(format!("second_name='{}', ", second_name));
         }
         None => {}
     };
@@ -242,8 +233,8 @@ async fn update_user_data(
             let date_opt = NaiveDate::from_ymd_opt(birthday.year, birthday.month, birthday.day);
             match date_opt {
                 Some(date) => {
-                    query += &format!("birthday={}, ", date);
-                },
+                    set_vector.push(format!("birthday='{}', ", date));
+                }
                 None => {
                     return (StatusCode::NOT_ACCEPTABLE, "Incorrect birthdate").into_response();
                 }
@@ -253,26 +244,27 @@ async fn update_user_data(
     };
     match input_payload.email {
         Some(email) => {
-            query += &format!("email={}, ", email);
+            set_vector.push(format!("email='{}', ", email));
         }
         None => {}
     };
     match input_payload.phone_number {
         Some(phone_number) => {
-            query += &format!("phone_number={}, ", phone_number);
+            set_vector.push(format!("phone_number='{}', ", phone_number));
         }
         None => {}
     };
 
-    let query_result = sqlx::query_as!(
-        UsersModel,
-        "UPDATE users SET active_token='' WHERE username=$1 RETURNING *",
-        &decoded_token.username,
-    )
-    .fetch_optional(&state.pool)
-    .await;
+    let query = format!(
+        "UPDATE users SET {} WHERE username='{}'",
+        set_vector.join(", "),
+        decoded_token.username
+    );
 
-    // 1) проверить токен
-    // 2) если верный то обновить
-    ().into_response()
+    let query_result = sqlx::query(&query).execute(&state.pool).await;
+
+    match query_result {
+        Ok(_) => (StatusCode::OK).into_response(),
+        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
+    }
 }
