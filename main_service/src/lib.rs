@@ -69,13 +69,13 @@ pub async fn create_app(users_db_url: &str, need_to_clear: bool) -> Router {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SignupRequest {
-    login: String,
+    username: String,
     password: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LoginRequest {
-    login: String,
+    username: String,
     password: String,
 }
 
@@ -137,7 +137,7 @@ async fn signup(
     State(state): State<Arc<AppState>>,
     Json(input_payload): Json<SignupRequest>,
 ) -> Response {
-    if !check_login(&input_payload.login) {
+    if !check_login(&input_payload.username) {
         return (
             StatusCode::NOT_ACCEPTABLE,
             "Login must be from 2 to 20 symbols and consist only of ascii lowercase letters and digist.",
@@ -155,7 +155,7 @@ async fn signup(
     let query_result = sqlx::query_as!(
         UsersModel,
         "INSERT INTO users (username, password_hash) VALUES ($1, $2)",
-        input_payload.login,
+        input_payload.username,
         get_hash(&input_payload.password),
     )
     .execute(&state.pool)
@@ -194,8 +194,42 @@ fn decode_token(
     );
 }
 
-async fn login(Json(input_payload): Json<LoginRequest>) -> Response {
-    let token = generate_token(&input_payload.login);
+struct Count {
+    count: Option<i64>,
+}
+
+async fn login(
+    State(state): State<Arc<AppState>>,
+    Json(input_payload): Json<LoginRequest>,
+) -> Response {
+    // TODO check user in the DB
+    let query_result = sqlx::query_as!(
+        Count,
+        "SELECT COUNT(*) FROM users WHERE username=$1 and password_hash=$2",
+        input_payload.username,
+        get_hash(&input_payload.password),
+    )
+    .fetch_one(&state.pool)
+    .await;
+
+    match query_result {
+        Ok(count) => match count.count {
+            Some(count) => match count {
+                1 => {}
+                _ => {
+                    return (StatusCode::UNAUTHORIZED).into_response();
+                }
+            },
+            None => {
+                return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+            }
+        },
+        Err(_) => {
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
+
+    let token = generate_token(&input_payload.username);
     (StatusCode::OK, [("Authorization", token)]).into_response()
 }
 
@@ -262,7 +296,7 @@ async fn update_user_data(
     );
 
     let query_result = sqlx::query(&query).execute(&state.pool).await;
-
+    // TODO всё таки сделать тут проверку на был ли найдет такой user или нет!!!
     match query_result {
         Ok(_) => (StatusCode::OK).into_response(),
         Err(_) => (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
