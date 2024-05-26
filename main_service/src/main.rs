@@ -1,10 +1,15 @@
+use dotenv::dotenv;
 use main_service;
 use std::env;
-use dotenv::dotenv;
 
 #[tokio::main]
 async fn main() {
-    dotenv().ok();
+    match std::env::var("DATABASE_URL") {
+        Ok(_) => {}
+        Err(_) => {
+            dotenv().ok();
+        }
+    };
 
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {

@@ -12,18 +12,35 @@ use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, 
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres, Row};
-use std::{str, sync::Arc};
+use std::{str, sync::Arc, thread, time::Duration};
 
 pub async fn create_pool(database_url: &str) -> Pool<Postgres> {
-    match PgPoolOptions::new().connect(&database_url).await {
-        Ok(pool) => {
-            return pool;
+    println!("Called create_pool");
+    let mut attempts = 0;
+    let max_attempts = 5;
+
+    while attempts < max_attempts {
+        match PgPoolOptions::new().connect(&database_url).await {
+            Ok(pool) => return pool,
+            Err(err) => {
+                println!(
+                    "Attempt {}: Failed to connect to the database: {:?}",
+                    attempts + 1,
+                    err
+                );
+                attempts += 1;
+                if attempts < max_attempts {
+                    thread::sleep(Duration::from_secs(5)); // wait for 5 seconds before retrying
+                }
+            }
         }
-        Err(err) => {
-            println!("Failed to connect to the database: {:?}", err);
-            std::process::exit(1);
-        }
-    };
+    }
+
+    println!(
+        "Failed to connect to the database after {} attempts.",
+        max_attempts
+    );
+    std::process::exit(1);
 }
 
 fn get_hash(password: &String) -> String {

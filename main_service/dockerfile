@@ -1,7 +1,3 @@
-FROM python:3.10
-
-RUN pip install flask jwt flask_sqlalchemy hashlib datetime sqlite
-
-COPY main.py /
-
-CMD ["python3", "/main.py"]
+FROM rust:latest as builder
+WORKDIR /usr/src/app
+COPY . .
