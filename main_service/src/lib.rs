@@ -290,15 +290,17 @@ async fn update_user_data(
     };
 
     let query = format!(
-        "UPDATE users SET {} WHERE username='{}'",
+        "UPDATE users SET {} WHERE username='{}' RETURNING *",
         set_vector.join(", "),
         decoded_token.username
     );
 
-    let query_result = sqlx::query(&query).execute(&state.pool).await;
-    // TODO всё таки сделать тут проверку на был ли найдет такой user или нет!!!
+    let query_result = sqlx::query(&query).fetch_optional(&state.pool).await;
     match query_result {
-        Ok(_) => (StatusCode::OK).into_response(),
+        Ok(query_result_opt) => match query_result_opt {
+            Some(_) => (StatusCode::OK).into_response(),
+            None => (StatusCode::NOT_FOUND).into_response(),
+        },
         Err(_) => (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
     }
 }
