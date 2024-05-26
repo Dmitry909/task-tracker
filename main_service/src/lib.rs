@@ -64,7 +64,7 @@ pub async fn create_app(users_db_url: &str, need_to_clear: bool) -> Router {
         .route("/signup", post(signup))
         .route("/login", post(login))
         .route("/update_user_data", put(update_user_data))
-        // .route("/get_user_data", get(get_user_data))
+        .route("/get_user_data", get(get_user_data))
         .with_state(shared_state)
 }
 
@@ -203,7 +203,6 @@ async fn login(
     State(state): State<Arc<AppState>>,
     Json(input_payload): Json<LoginRequest>,
 ) -> Response {
-    // TODO check user in the DB
     let query_result = sqlx::query_as!(
         Count,
         "SELECT COUNT(*) FROM users WHERE username=$1 and password_hash=$2",
@@ -326,28 +325,38 @@ async fn update_user_data(
     }
 }
 
-// async fn get_user_data(State(state): State<Arc<AppState>>, headers: HeaderMap) -> Response {
-//     let username = match check_authorization(headers).await {
-//         CheckAuthorizationResult::Username(username) => username,
-//         CheckAuthorizationResult::NoToken => {
-//             return (StatusCode::UNAUTHORIZED, "Token is missing").into_response();
-//         }
-//         CheckAuthorizationResult::Invalid => {
-//             return (StatusCode::UNAUTHORIZED, "Invalid token").into_response();
-//         }
-//     };
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GetUserDataResponse {
+    first_name: Option<String>,
+    second_name: Option<String>,
+    email: Option<String>,
+    phone_number: Option<String>,
+}
 
-//     let query_result = sqlx::query_as!(
-//         UsersModel,
-//         "SELECT * FROM users WHERE username=$1",
-//         username,
-//     )
-//     .fetch_optional(state.pool)
-//     .await;
+async fn get_user_data(State(state): State<Arc<AppState>>, headers: HeaderMap) -> Response {
+    let username = match check_authorization(headers).await {
+        CheckAuthorizationResult::Username(username) => username,
+        CheckAuthorizationResult::NoToken => {
+            return (StatusCode::UNAUTHORIZED, "Token is missing").into_response();
+        }
+        CheckAuthorizationResult::Invalid => {
+            return (StatusCode::UNAUTHORIZED, "Invalid token").into_response();
+        }
+    };
 
-//     match query_result {
-//         Ok(opt) => 
-//     }
+    let query_result = sqlx::query_as!(
+        GetUserDataResponse,
+        "SELECT first_name, second_name, email, phone_number FROM users WHERE username=$1",
+        username,
+    )
+    .fetch_optional(&state.pool)
+    .await;
 
-//     (StatusCode::OK).into_response()
-// }
+    match query_result {
+        Ok(opt) => match opt {
+            Some(value) => (StatusCode::OK, Json(value)).into_response(),
+            None => (StatusCode::NOT_FOUND).into_response(),
+        },
+        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
+    }
+}
