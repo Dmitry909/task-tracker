@@ -19,3 +19,8 @@ def login(username: str, password: str):
 def update_user_data(token: str, json_data: dict):
     response = requests.put(f'{host}/update_user_data', headers={"Authorization": token}, json=json_data)
     return response
+
+
+def get_user_data(token: str):
+    response = requests.get(f'{host}/get_user_data', headers={"Authorization": token})
+    return response

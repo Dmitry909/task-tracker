@@ -2,7 +2,7 @@ use axum::{
     extract::State,
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
-    routing::{post, put},
+    routing::{get, post, put},
     Json, Router,
 };
 use chrono::Local;
@@ -148,7 +148,7 @@ async fn signup(
     if !check_password(&input_payload.password) {
         return (
             StatusCode::NOT_ACCEPTABLE,
-            "Password must be from 8 to 30 symbols, consist only of ascii symbols and contain at least one lowercase, one uppercase and one digit.",
+            "Password must be from 8 to 30 symbols, consist only of ascii symbols and contain at least one lowercase, one uppercase, one digit and one symbol.",
         )
             .into_response();
     }
@@ -272,13 +272,13 @@ async fn update_user_data(
     let mut set_vector = Vec::new();
     match input_payload.first_name {
         Some(first_name) => {
-            set_vector.push(format!("first_name='{}', ", first_name));
+            set_vector.push(format!("first_name='{}'", first_name));
         }
         None => {}
     };
     match input_payload.second_name {
         Some(second_name) => {
-            set_vector.push(format!("second_name='{}', ", second_name));
+            set_vector.push(format!("second_name='{}'", second_name));
         }
         None => {}
     };
@@ -298,13 +298,13 @@ async fn update_user_data(
     };
     match input_payload.email {
         Some(email) => {
-            set_vector.push(format!("email='{}', ", email));
+            set_vector.push(format!("email='{}'", email));
         }
         None => {}
     };
     match input_payload.phone_number {
         Some(phone_number) => {
-            set_vector.push(format!("phone_number='{}', ", phone_number));
+            set_vector.push(format!("phone_number='{}'", phone_number));
         }
         None => {}
     };
@@ -314,6 +314,8 @@ async fn update_user_data(
         set_vector.join(", "),
         username
     );
+
+    println!("{}", &query);
 
     let query_result = sqlx::query(&query).fetch_optional(&state.pool).await;
     match query_result {
