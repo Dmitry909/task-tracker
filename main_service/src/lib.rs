@@ -64,6 +64,7 @@ pub async fn create_app(users_db_url: &str, need_to_clear: bool) -> Router {
         .route("/signup", post(signup))
         .route("/login", post(login))
         .route("/update_user_data", put(update_user_data))
+        // .route("/get_user_data", get(get_user_data))
         .with_state(shared_state)
 }
 
@@ -233,18 +234,38 @@ async fn login(
     (StatusCode::OK, [("Authorization", token)]).into_response()
 }
 
-async fn update_user_data(
-    State(state): State<Arc<AppState>>,
-    headers: HeaderMap,
-    Json(input_payload): Json<UpdateUserDataRequest>,
-) -> Response {
+enum CheckAuthorizationResult {
+    Username(String),
+    NoToken,
+    Invalid,
+}
+
+async fn check_authorization(headers: HeaderMap) -> CheckAuthorizationResult {
     if !headers.contains_key("Authorization") {
-        return (StatusCode::UNAUTHORIZED, "Token is missing").into_response();
+        return CheckAuthorizationResult::NoToken;
     }
     let token = headers["Authorization"].to_str().unwrap();
     let decoded_token = match decode_token(token) {
         Ok(c) => c.claims,
         Err(_) => {
+            return CheckAuthorizationResult::Invalid;
+        }
+    };
+
+    return CheckAuthorizationResult::Username(decoded_token.username);
+}
+
+async fn update_user_data(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(input_payload): Json<UpdateUserDataRequest>,
+) -> Response {
+    let username = match check_authorization(headers).await {
+        CheckAuthorizationResult::Username(username) => username,
+        CheckAuthorizationResult::NoToken => {
+            return (StatusCode::UNAUTHORIZED, "Token is missing").into_response();
+        }
+        CheckAuthorizationResult::Invalid => {
             return (StatusCode::UNAUTHORIZED, "Invalid token").into_response();
         }
     };
@@ -292,7 +313,7 @@ async fn update_user_data(
     let query = format!(
         "UPDATE users SET {} WHERE username='{}' RETURNING *",
         set_vector.join(", "),
-        decoded_token.username
+        username
     );
 
     let query_result = sqlx::query(&query).fetch_optional(&state.pool).await;
@@ -304,3 +325,29 @@ async fn update_user_data(
         Err(_) => (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
     }
 }
+
+// async fn get_user_data(State(state): State<Arc<AppState>>, headers: HeaderMap) -> Response {
+//     let username = match check_authorization(headers).await {
+//         CheckAuthorizationResult::Username(username) => username,
+//         CheckAuthorizationResult::NoToken => {
+//             return (StatusCode::UNAUTHORIZED, "Token is missing").into_response();
+//         }
+//         CheckAuthorizationResult::Invalid => {
+//             return (StatusCode::UNAUTHORIZED, "Invalid token").into_response();
+//         }
+//     };
+
+//     let query_result = sqlx::query_as!(
+//         UsersModel,
+//         "SELECT * FROM users WHERE username=$1",
+//         username,
+//     )
+//     .fetch_optional(state.pool)
+//     .await;
+
+//     match query_result {
+//         Ok(opt) => 
+//     }
+
+//     (StatusCode::OK).into_response()
+// }
