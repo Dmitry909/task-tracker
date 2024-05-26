@@ -26,3 +26,4 @@ sqlx = { version = "0.6", features = [
     "time",
 ] }
 serial_test = { version = "0.4.0" }
+dotenv = "0.15.0"

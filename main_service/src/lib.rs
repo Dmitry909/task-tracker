@@ -315,8 +315,6 @@ async fn update_user_data(
         username
     );
 
-    println!("{}", &query);
-
     let query_result = sqlx::query(&query).fetch_optional(&state.pool).await;
     match query_result {
         Ok(query_result_opt) => match query_result_opt {
