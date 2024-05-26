@@ -11,7 +11,7 @@ use hex;
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
+use sqlx::{postgres::PgPoolOptions, Pool, Postgres, Row};
 use std::{str, sync::Arc};
 
 pub async fn create_pool(database_url: &str) -> Pool<Postgres> {
@@ -54,9 +54,7 @@ pub async fn create_app(users_db_url: &str, need_to_clear: bool) -> Router {
     let pool = create_pool(users_db_url).await;
 
     if need_to_clear {
-        let _ = sqlx::query_as!(UsersModel, "TRUNCATE TABLE users",)
-            .execute(&pool)
-            .await;
+        let _ = sqlx::query("TRUNCATE TABLE users").execute(&pool).await;
     }
 
     let shared_state = Arc::new(AppState { pool });
@@ -153,12 +151,11 @@ async fn signup(
             .into_response();
     }
 
-    let query_result = sqlx::query_as!(
-        UsersModel,
-        "INSERT INTO users (username, password_hash) VALUES ($1, $2)",
+    let query_result = sqlx::query(&format!(
+        "INSERT INTO users (username, password_hash) VALUES ('{}', '{}')",
         input_payload.username,
-        get_hash(&input_payload.password),
-    )
+        get_hash(&input_payload.password)
+    ))
     .execute(&state.pool)
     .await;
 
@@ -195,35 +192,33 @@ fn decode_token(
     );
 }
 
-struct Count {
-    count: Option<i64>,
-}
-
 async fn login(
     State(state): State<Arc<AppState>>,
     Json(input_payload): Json<LoginRequest>,
 ) -> Response {
-    let query_result = sqlx::query_as!(
-        Count,
-        "SELECT COUNT(*) FROM users WHERE username=$1 and password_hash=$2",
-        input_payload.username,
-        get_hash(&input_payload.password),
-    )
+    let query_result = sqlx::query(&format!(
+        "SELECT COUNT(*) FROM users WHERE username='{}' and password_hash='{}'",
+        &input_payload.username,
+        &get_hash(&input_payload.password),
+    ))
     .fetch_one(&state.pool)
     .await;
 
     match query_result {
-        Ok(count) => match count.count {
-            Some(count) => match count {
-                1 => {}
-                _ => {
-                    return (StatusCode::UNAUTHORIZED).into_response();
+        Ok(count) => {
+            let q: Result<i64, sqlx::Error> = count.try_get(0);
+            match q {
+                Ok(count) => match count {
+                    1 => {}
+                    _ => {
+                        return (StatusCode::UNAUTHORIZED).into_response();
+                    }
+                },
+                Err(_) => {
+                    return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
                 }
-            },
-            None => {
-                return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
             }
-        },
+        }
         Err(_) => {
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
@@ -344,17 +339,28 @@ async fn get_user_data(State(state): State<Arc<AppState>>, headers: HeaderMap) -
         }
     };
 
-    let query_result = sqlx::query_as!(
-        GetUserDataResponse,
-        "SELECT first_name, second_name, email, phone_number FROM users WHERE username=$1",
-        username,
-    )
+    let query_result = sqlx::query(&format!(
+        "SELECT first_name, second_name, email, phone_number FROM users WHERE username='{}'",
+        &username
+    ))
     .fetch_optional(&state.pool)
     .await;
 
     match query_result {
         Ok(opt) => match opt {
-            Some(value) => (StatusCode::OK, Json(value)).into_response(),
+            Some(row) => {
+                let first_name: Option<String> = row.get("first_name");
+                let second_name: Option<String> = row.get("second_name");
+                let email: Option<String> = row.get("email");
+                let phone_number: Option<String> = row.get("phone_number");
+                let result = GetUserDataResponse {
+                    first_name,
+                    second_name,
+                    email,
+                    phone_number,
+                };
+                (StatusCode::OK, Json(result)).into_response()
+            }
             None => (StatusCode::NOT_FOUND).into_response(),
         },
         Err(_) => (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
