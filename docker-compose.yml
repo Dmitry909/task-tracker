@@ -5,18 +5,32 @@ services:
     container_name: main_service_db
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: my_password
       POSTGRES_DB: main_service_soa
-      POSTGRES_PORT: 2345
     ports:
-      - "2345:2345"
+      - "2345:5432"
 
   server:
     build: ./main_service
     environment:
-      DATABASE_URL: postgres://postgres:postgres@db:2345/main_service_soa
-    command: sh -c "cargo run -- 4000"
+      DATABASE_URL: postgres://postgres:my_password@db:5432/main_service_soa
+    command: sh -c "sleep 10s; cargo run -- 4000"
     ports:
       - "4000:4000"
     depends_on:
       - db
+
+  # server_py:
+  #   build: ./main_service_py
+  #   environment:
+  #     DATABASE_HOST: db
+  #     DATABASE_PORT: 5432
+  #     DATABASE_NAME: main_service_soa
+  #     DATABASE_USER: postgres
+  #     DATABASE_PASSWORD: my_password
+  #   command: sh -c "sleep 10s; python server.py"
+  #   ports:
+  #     - "4000:4000"
+  #   depends_on:
+  #     - db
+    
