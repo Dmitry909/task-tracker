@@ -11,15 +11,6 @@ async fn main() {
         }
     };
 
-    match std::env::var("DATABASE_URL") {
-        Ok(url) => {
-            println!("DATABASE_URL: {}", url);
-        }
-        Err(_) => {
-            std::process::exit(1);
-        }
-    };
-
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
         println!("Usage: ./main_service [port]");

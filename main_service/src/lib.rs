@@ -15,7 +15,6 @@ use sqlx::{postgres::PgPoolOptions, Pool, Postgres, Row};
 use std::{str, sync::Arc, thread, time::Duration};
 
 pub async fn create_pool(database_url: &str) -> Pool<Postgres> {
-    println!("Called create_pool");
     let mut attempts = 0;
     let max_attempts = 5;
 
