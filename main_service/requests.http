@@ -3,8 +3,8 @@ POST http://127.0.0.1:4000/signup
 Content-Type: application/json
 
 {
-    "username": "alex",
-    "password": "alex1990"
+    "username": "alex1",
+    "password": "alex1990*A"
 }
 
 ###
@@ -12,30 +12,31 @@ POST http://127.0.0.1:4000/login
 Content-Type: application/json
 
 {
-    "username": "doesn't exist",
-    "password": "password"
-}
-
-###
-POST http://127.0.0.1:4000/login
-Content-Type: application/json
-
-{
-    "username": "alex",
-    "password": "alex1990"
+    "username": "alex1",
+    "password": "alex1990*A"
 }
 
 ###
 PUT http://127.0.0.1:4000/update_user_data
-Authorization: 
+Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6ImFsZXgxIiwiZXhwIjoxNzE2OTEzNjYxfQ.HBebmYGsC62pQzB7BVImt1m4hu8PR4JlPaMZwKCYGy4
 Content-Type: application/json
 
 {
     "first_name": "qqqqqqqqqqqqqqqqqqqq",
-    "last_name": "www"
+    "second_name": "www"
+}
+
+###
+PUT http://127.0.0.1:4000/update_user_data
+Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6ImFsZXgxIiwiZXhwIjoxNzE2OTEzNjYxfQ.HBebmYGsC62pQzB7BVImt1m4hu8PR4JlPaMZwKCYGy4
+Content-Type: application/json
+
+{
+    "first_name": "dfdsafd",
+    "email": "gsdg"
 }
 
 ###
 GET http://127.0.0.1:4000/get_user_data
-Authorization: 
+Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6ImFsZXgxIiwiZXhwIjoxNzE2OTEzNjYxfQ.HBebmYGsC62pQzB7BVImt1m4hu8PR4JlPaMZwKCYGy4
 Content-Type: application/json
