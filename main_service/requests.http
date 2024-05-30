@@ -17,7 +17,7 @@ Content-Type: application/json
 }
 
 ###
-PUT http://127.0.0.1:4000/update_user_data
+PUT http://127.0.0.1:4000/personal_data
 Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6ImFsZXgxIiwiZXhwIjoxNzE2OTEzNjYxfQ.HBebmYGsC62pQzB7BVImt1m4hu8PR4JlPaMZwKCYGy4
 Content-Type: application/json
 
@@ -27,7 +27,7 @@ Content-Type: application/json
 }
 
 ###
-PUT http://127.0.0.1:4000/update_user_data
+PUT http://127.0.0.1:4000/personal_data
 Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6ImFsZXgxIiwiZXhwIjoxNzE2OTEzNjYxfQ.HBebmYGsC62pQzB7BVImt1m4hu8PR4JlPaMZwKCYGy4
 Content-Type: application/json
 
@@ -37,6 +37,6 @@ Content-Type: application/json
 }
 
 ###
-GET http://127.0.0.1:4000/get_user_data
+GET http://127.0.0.1:4000/personal_data
 Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6ImFsZXgxIiwiZXhwIjoxNzE2OTEzNjYxfQ.HBebmYGsC62pQzB7BVImt1m4hu8PR4JlPaMZwKCYGy4
 Content-Type: application/json

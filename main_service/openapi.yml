@@ -51,9 +51,9 @@ paths:
           description: Log-in successful
         401:
           description: Invalid credentials
-  /update_user_data:
+  /personal_data:
     put:
-      summary: Update a user's details
+      summary: Update user's personal data
       requestBody:
         required: true
         content:
@@ -75,6 +75,15 @@ paths:
       responses:
         200:
           description: User updated successfully
+        401:
+          description: Unauthorized request
+        404:
+          description: User not found
+    get:
+      summary: Get user's personal data
+      responses:
+        200:
+          description: OK
         401:
           description: Unauthorized request
         404:

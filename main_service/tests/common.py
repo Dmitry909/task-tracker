@@ -16,11 +16,11 @@ def login(username: str, password: str):
     return response
 
 
-def update_user_data(token: str, json_data: dict):
-    response = requests.put(f'{host}/update_user_data', headers={"Authorization": token}, json=json_data)
+def update_personal_data(token: str, json_data: dict):
+    response = requests.put(f'{host}/personal_data', headers={"Authorization": token}, json=json_data)
     return response
 
 
-def get_user_data(token: str):
-    response = requests.get(f'{host}/get_user_data', headers={"Authorization": token})
+def get_personal_data(token: str):
+    response = requests.get(f'{host}/personal_data', headers={"Authorization": token})
     return response

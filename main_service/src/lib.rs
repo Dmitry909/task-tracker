@@ -77,8 +77,8 @@ pub async fn create_app(users_db_url: &str, need_to_clear: bool) -> Router {
     Router::new()
         .route("/signup", post(signup))
         .route("/login", post(login))
-        .route("/update_user_data", put(update_user_data))
-        .route("/get_user_data", get(get_user_data))
+        .route("/personal_data", put(update_personal_data))
+        .route("/personal_data", get(get_personal_data))
         .with_state(shared_state)
 }
 
@@ -265,7 +265,7 @@ async fn check_authorization(headers: HeaderMap) -> CheckAuthorizationResult {
     return CheckAuthorizationResult::Username(decoded_token.username);
 }
 
-async fn update_user_data(
+async fn update_personal_data(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
     Json(input_payload): Json<UpdateUserDataRequest>,
@@ -344,7 +344,7 @@ pub struct GetUserDataResponse {
     phone_number: Option<String>,
 }
 
-async fn get_user_data(State(state): State<Arc<AppState>>, headers: HeaderMap) -> Response {
+async fn get_personal_data(State(state): State<Arc<AppState>>, headers: HeaderMap) -> Response {
     let username = match check_authorization(headers).await {
         CheckAuthorizationResult::Username(username) => username,
         CheckAuthorizationResult::NoToken => {
