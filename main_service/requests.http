@@ -1,0 +1,42 @@
+###
+POST http://127.0.0.1:4000/signup
+Content-Type: application/json
+
+{
+    "username": "alex1",
+    "password": "alex1990*A"
+}
+
+###
+POST http://127.0.0.1:4000/login
+Content-Type: application/json
+
+{
+    "username": "alex1",
+    "password": "alex1990*A"
+}
+
+###
+PUT http://127.0.0.1:4000/personal_data
+Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6ImFsZXgxIiwiZXhwIjoxNzE2OTEzNjYxfQ.HBebmYGsC62pQzB7BVImt1m4hu8PR4JlPaMZwKCYGy4
+Content-Type: application/json
+
+{
+    "first_name": "qqqqqqqqqqqqqqqqqqqq",
+    "second_name": "www"
+}
+
+###
+PUT http://127.0.0.1:4000/personal_data
+Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6ImFsZXgxIiwiZXhwIjoxNzE2OTEzNjYxfQ.HBebmYGsC62pQzB7BVImt1m4hu8PR4JlPaMZwKCYGy4
+Content-Type: application/json
+
+{
+    "first_name": "dfdsafd",
+    "email": "gsdg"
+}
+
+###
+GET http://127.0.0.1:4000/personal_data
+Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6ImFsZXgxIiwiZXhwIjoxNzE2OTEzNjYxfQ.HBebmYGsC62pQzB7BVImt1m4hu8PR4JlPaMZwKCYGy4
+Content-Type: application/json

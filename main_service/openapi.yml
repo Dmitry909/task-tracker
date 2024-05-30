@@ -1,0 +1,90 @@
+openapi: 3.0.1
+info:
+  title: Task-tracker users microservice
+  version: 1.0.0
+servers:
+  - url: http://localhost:4000/
+paths:
+  /signup:
+    post:
+      summary: Create a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+              required:
+                - username
+                - password
+      responses:
+        201:
+          description: User created
+        406:
+          description: Username is incorrect
+        409:
+          description: Username is already exist
+  /login:
+    post:
+      summary: Log in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+              required:
+                - username
+                - password
+      responses:
+        200:
+          description: Log-in successful
+        401:
+          description: Invalid credentials
+  /personal_data:
+    put:
+      summary: Update user's personal data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                surname:
+                  type: string
+                birthdate:
+                  type: string
+                  format: date
+                email:
+                  type: string
+                phone:
+                  type: string
+      responses:
+        200:
+          description: User updated successfully
+        401:
+          description: Unauthorized request
+        404:
+          description: User not found
+    get:
+      summary: Get user's personal data
+      responses:
+        200:
+          description: OK
+        401:
+          description: Unauthorized request
+        404:
+          description: User not found
