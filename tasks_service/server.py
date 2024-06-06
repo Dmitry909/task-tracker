@@ -9,13 +9,7 @@ import tasks_pb2_grpc
 
 
 class TaskService(tasks_pb2_grpc.TaskServiceServicer):
-    def init(self):
-        print(f'!!!: {os.getenv("DATABASE_HOST")}')
-        print(f'!!!: {os.getenv("DATABASE_PORT")}')
-        print(f'!!!: {os.getenv("DATABASE_NAME")}')
-        print(f'!!!: {os.getenv("DATABASE_USER")}')
-        print(f'!!!: {os.getenv("DATABASE_PASSWORD")}')
-        exit(101)
+    def __init__(self):
         self.conn = psycopg2.connect(host=os.getenv("DATABASE_HOST"),
                                      port=os.getenv("DATABASE_PORT"),
                                      dbname=os.getenv("DATABASE_NAME"),
@@ -79,7 +73,6 @@ class TaskService(tasks_pb2_grpc.TaskServiceServicer):
 
 
 def serve():
-    print('!!! serve called')
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     tasks_pb2_grpc.add_TaskServiceServicer_to_server(TaskService(), server)
     server.add_insecure_port('[::]:50051')
@@ -87,5 +80,4 @@ def serve():
     server.wait_for_termination()
 
 
-print('!!! before serve')
 serve()

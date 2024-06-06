@@ -20,16 +20,16 @@ services:
   #   depends_on:
   #     - main_service_db
 
-  # tasks_service_db:
-  #   build: ./tasks_service_db/
-  #   restart: always
-  #   container_name: tasks_service_db
-  #   environment:
-  #     POSTGRES_USER: postgres
-  #     POSTGRES_PASSWORD: my_password
-  #     POSTGRES_DB: tasks_service_soa
-  #   # ports:
-  #   #   - "2346:5432"
+  tasks_service_db:
+    build: ./tasks_service_db/
+    restart: always
+    container_name: tasks_service_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: my_password
+      POSTGRES_DB: tasks_service_soa
+    # ports:
+    #   - "2346:5432"
 
   tasks_service:
     build: ./tasks_service
@@ -39,8 +39,8 @@ services:
       DATABASE_NAME: tasks_service_soa
       DATABASE_USER: postgres
       DATABASE_PASSWORD: my_password
-    command: sh -c "ls ; sleep 1s ; python3 server.py"
+    command: sh -c "ls ; sleep 10s ; python3 server.py"
     ports:
       - ":50051"
-    # depends_on:
-    #   - tasks_service_db
+    depends_on:
+      - tasks_service_db
