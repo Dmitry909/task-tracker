@@ -422,6 +422,13 @@ pub struct GetTaskRequest1 {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct GetTaskResponse1 {
+    task_id: i64,
+    author_id: i64,
+    text: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ListTasksRequest1 {
     offset: i64,
     limit: i64,
@@ -442,7 +449,7 @@ async fn create_task(
     };
 
     println!("1");
-    let url = "http://tasks_service::50051";
+    let url = "http://tasks_service:50051";
     let mut client = match TaskServiceClient::connect(url).await {
         Ok(client) => client,
         Err(_) => {
@@ -484,7 +491,7 @@ async fn update_task(
         }
     };
 
-    let url = "http://tasks_service::50051";
+    let url = "http://tasks_service:50051";
     let mut client = match TaskServiceClient::connect(url).await {
         Ok(client) => client,
         Err(_) => {
@@ -497,8 +504,8 @@ async fn update_task(
         new_text: input_payload.new_text,
     };
     let request = tonic::Request::new(req);
-    let response = match client.update_task(request).await {
-        Ok(response) => response,
+    match client.update_task(request).await {
+        Ok(_) => {}
         Err(_) => {
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
@@ -521,13 +528,31 @@ async fn delete_task(
         }
     };
 
+    println!("!1");
+    let url = "http://tasks_service:50051";
+    let mut client = match TaskServiceClient::connect(url).await {
+        Ok(client) => client,
+        Err(_) => {
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
+    let req = proto::DeleteTaskRequest {
+        user_id: id_and_username.0,
+        task_id: input_payload.task_id,
+    };
+    let request = tonic::Request::new(req);
+    println!("!2");
+    match client.delete_task(request).await {
+        Ok(_) => {}
+        Err(_) => {
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
+    println!("!3");
     (StatusCode::OK).into_response()
 }
 
-async fn get_task(
-    headers: HeaderMap,
-    Json(input_payload): Json<GetTaskRequest1>,
-) -> Response {
+async fn get_task(headers: HeaderMap, Json(input_payload): Json<GetTaskRequest1>) -> Response {
     let id_and_username = match check_authorization(headers).await {
         CheckAuthorizationResult::IdAndUsername(username) => username,
         CheckAuthorizationResult::NoToken => {
@@ -538,13 +563,34 @@ async fn get_task(
         }
     };
 
-    (StatusCode::OK).into_response()
+    let url = "http://tasks_service:50051";
+    let mut client = match TaskServiceClient::connect(url).await {
+        Ok(client) => client,
+        Err(_) => {
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
+    let req = proto::GetTaskRequest {
+        user_id: id_and_username.0, // TODO add
+        task_id: input_payload.task_id,
+    };
+    let request = tonic::Request::new(req);
+    let response = match client.get_task(request).await {
+        Ok(response) => response,
+        Err(_) => {
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
+
+    let resp = GetTaskResponse1 {
+        task_id: response.get_ref().task_id,
+        author_id: response.get_ref().author_id,
+        text: response.get_ref().text.clone(),
+    };
+    (StatusCode::CREATED, Json(resp)).into_response()
 }
 
-async fn list_tasks(
-    headers: HeaderMap,
-    Json(input_payload): Json<ListTasksRequest1>,
-) -> Response {
+async fn list_tasks(headers: HeaderMap, Json(input_payload): Json<ListTasksRequest1>) -> Response {
     let id_and_username = match check_authorization(headers).await {
         CheckAuthorizationResult::IdAndUsername(username) => username,
         CheckAuthorizationResult::NoToken => {
@@ -555,5 +601,37 @@ async fn list_tasks(
         }
     };
 
-    (StatusCode::OK).into_response()
+    let url = "http://tasks_service:50051";
+    let mut client = match TaskServiceClient::connect(url).await {
+        Ok(client) => client,
+        Err(_) => {
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
+    let req = proto::ListTasksRequest {
+        user_id: id_and_username.0, // TODO add
+        offset: input_payload.offset,
+        limit: input_payload.limit,
+    };
+    let request = tonic::Request::new(req);
+    let response = match client.list_tasks(request).await {
+        Ok(response) => response,
+        Err(_) => {
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
+
+    let tasks: Vec<GetTaskResponse1> = response
+        .get_ref()
+        .clone()
+        .tasks
+        .into_iter()
+        .map(|task| GetTaskResponse1 {
+            task_id: task.task_id,
+            author_id: task.author_id,
+            text: task.text,
+        })
+        .collect();
+
+    (StatusCode::OK, Json(tasks)).into_response()
 }

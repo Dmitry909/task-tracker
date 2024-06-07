@@ -8,7 +8,7 @@ Content-Type: application/json
 }
 
 ###
-POST http://127.0.0.1:5000/login
+POST http://127.0.0.1:4000/login
 Content-Type: application/json
 
 {
@@ -17,8 +17,8 @@ Content-Type: application/json
 }
 
 ###
-POST http://127.0.0.1:5000/create_task
-Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6MTgsInVzZXJuYW1lIjoiYWxleDEiLCJleHAiOjE3MTc4NTgwNjN9.NDFbHyfeLviJtBmmVl5ncDHleirmmz_gawetCyKTOm8
+POST http://127.0.0.1:4000/create_task
+Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6MiwidXNlcm5hbWUiOiJhbGV4MSIsImV4cCI6MTcxNzg2MTM4Nn0.vdZWSDSqN-ZwisNBba5ZfzlCFD8WW0k02clvtFwsdXc
 Content-Type: application/json
 
 {
@@ -27,38 +27,38 @@ Content-Type: application/json
 
 ###
 GET http://127.0.0.1:4000/get_task
-Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6MTgsInVzZXJuYW1lIjoiYWxleDEiLCJleHAiOjE3MTc4NTgwNjN9.NDFbHyfeLviJtBmmVl5ncDHleirmmz_gawetCyKTOm8
+Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6MiwidXNlcm5hbWUiOiJhbGV4MSIsImV4cCI6MTcxNzg2MTM4Nn0.vdZWSDSqN-ZwisNBba5ZfzlCFD8WW0k02clvtFwsdXc
 Content-Type: application/json
 
 {
-    "task_id": 149
+    "task_id": 1
 }
 
 ###
 PUT http://127.0.0.1:4000/update_task
-Authorization: 
+Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6MiwidXNlcm5hbWUiOiJhbGV4MSIsImV4cCI6MTcxNzg2MTM4Nn0.vdZWSDSqN-ZwisNBba5ZfzlCFD8WW0k02clvtFwsdXc
 Content-Type: application/json
 
 {
-    "task_id": ,
-    "new_text": "Task text"
+    "task_id": 3,
+    "new_text": "New task text"
 }
 
 ###
 DELETE http://127.0.0.1:4000/delete_task
-Authorization: 
+Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6MiwidXNlcm5hbWUiOiJhbGV4MSIsImV4cCI6MTcxNzg2MTM4Nn0.vdZWSDSqN-ZwisNBba5ZfzlCFD8WW0k02clvtFwsdXc
 Content-Type: application/json
 
 {
-    "task_id": ""
+    "task_id": 2
 }
 
 ###
 GET http://127.0.0.1:4000/list_tasks
-Authorization: 
+Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6MiwidXNlcm5hbWUiOiJhbGV4MSIsImV4cCI6MTcxNzg2MTM4Nn0.vdZWSDSqN-ZwisNBba5ZfzlCFD8WW0k02clvtFwsdXc
 Content-Type: application/json
 
 {
-    "offset": "0",
-    "limit": "100"
+    "offset": 0,
+    "limit": 100
 }
