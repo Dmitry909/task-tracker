@@ -1,0 +1,64 @@
+###
+POST http://127.0.0.1:4000/signup
+Content-Type: application/json
+
+{
+    "username": "alex1",
+    "password": "alex1990*A"
+}
+
+###
+POST http://127.0.0.1:4000/login
+Content-Type: application/json
+
+{
+    "username": "alex1",
+    "password": "alex1990*A"
+}
+
+###
+POST http://127.0.0.1:4000/create_task
+Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJhbGV4MSIsImV4cCI6MTcxNzg2MjYwOX0.ZyiE8JtnqAVwMXsslt5MKz0_XFD79L_gaqlJ-zveIHA
+Content-Type: application/json
+
+{
+    "text": "Task text"
+}
+
+###
+GET http://127.0.0.1:4000/get_task
+Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJhbGV4MSIsImV4cCI6MTcxNzg2MjYwOX0.ZyiE8JtnqAVwMXsslt5MKz0_XFD79L_gaqlJ-zveIHA
+Content-Type: application/json
+
+{
+    "task_id": 2
+}
+
+###
+PUT http://127.0.0.1:4000/update_task
+Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJhbGV4MSIsImV4cCI6MTcxNzg2MjYwOX0.ZyiE8JtnqAVwMXsslt5MKz0_XFD79L_gaqlJ-zveIHA
+Content-Type: application/json
+
+{
+    "task_id": 3,
+    "new_text": "New task text"
+}
+
+###
+DELETE http://127.0.0.1:4000/delete_task
+Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJhbGV4MSIsImV4cCI6MTcxNzg2MjYwOX0.ZyiE8JtnqAVwMXsslt5MKz0_XFD79L_gaqlJ-zveIHA
+Content-Type: application/json
+
+{
+    "task_id": 2
+}
+
+###
+GET http://127.0.0.1:4000/list_tasks
+Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJhbGV4MSIsImV4cCI6MTcxNzg2MjYwOX0.ZyiE8JtnqAVwMXsslt5MKz0_XFD79L_gaqlJ-zveIHA
+Content-Type: application/json
+
+{
+    "offset": 1,
+    "limit": 100
+}
