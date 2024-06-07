@@ -9,7 +9,7 @@ use chrono::Local;
 use chrono::NaiveDate;
 use hex;
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
-use proto::task_service_client::TaskServiceClient;
+use proto::{task_service_client::TaskServiceClient, CreateTaskResponse};
 use proto::{
     CreateTaskRequest, DeleteTaskRequest, GetTaskRequest, ListTasksRequest, UpdateTaskRequest,
 };
@@ -403,8 +403,13 @@ pub struct CreateTaskRequest1 {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct CreateTaskResponse1 {
+    task_id: i32,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct UpdateTaskRequest1 {
-    task_id: i64,
+    task_id: i32,
     new_text: String,
 }
 
@@ -447,7 +452,7 @@ async fn create_task(
         }
     };
     let req = proto::CreateTaskRequest {
-        author_id: 1,
+        author_id: 1, // TODO add
         text: input_payload.text,
     };
     let request = tonic::Request::new(req);
@@ -458,9 +463,10 @@ async fn create_task(
         }
     };
 
-    println!("{}", response.get_ref().task_id);
-
-    (StatusCode::OK).into_response()
+    let resp = CreateTaskResponse1 {
+        task_id: response.get_ref().task_id,
+    };
+    (StatusCode::CREATED, Json(resp)).into_response()
 }
 
 async fn update_task(
@@ -475,6 +481,26 @@ async fn update_task(
         }
         CheckAuthorizationResult::Invalid => {
             return (StatusCode::UNAUTHORIZED, "Invalid token").into_response();
+        }
+    };
+
+    let url = "http://localhost:23456";
+    let mut client = match TaskServiceClient::connect(url).await {
+        Ok(client) => client,
+        Err(_) => {
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
+    let req = proto::UpdateTaskRequest {
+        user_id: 1, // TODO add
+        task_id: input_payload.task_id,
+        new_text: input_payload.new_text,
+    };
+    let request = tonic::Request::new(req);
+    let response = match client.update_task(request).await {
+        Ok(response) => response,
+        Err(_) => {
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     };
 
