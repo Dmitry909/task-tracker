@@ -3,7 +3,7 @@ import tasks_pb2
 import tasks_pb2_grpc
 import json
 
-host = 'localhost:23456'
+host = 'localhost:50051'
 channel = grpc.insecure_channel(host)
 stub = tasks_pb2_grpc.TaskServiceStub(channel)
 
