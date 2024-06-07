@@ -31,10 +31,16 @@ def do_everything_test():
     ids = [task.task_id for task in list_response.tasks]
     assert ids == [task_id1, task_id3, task_id4, task_id5]
 
-    delete_task(author_id, task_id4)
-    list_response = list_tasks(author_id, 0, 100)
+    delete_task(author_id, task_id3)
+    task_id6 = create_task(author_id, text5).task_id
+    list_response = list_tasks(author_id, 1, 2)
     ids = [task.task_id for task in list_response.tasks]
-    assert ids == [task_id1, task_id3, task_id5]
+    assert ids == [task_id4, task_id5]
+
+    delete_task(author_id, task_id1)
+    delete_task(author_id, task_id4)
+    delete_task(author_id, task_id5)
+    delete_task(author_id, task_id6)
 
     print('do_everything_test OK')
 
