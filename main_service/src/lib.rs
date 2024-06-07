@@ -2,7 +2,7 @@ use axum::{
     extract::State,
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
-    routing::{get, post, put},
+    routing::{get, post, put, delete},
     Json, Router,
 };
 use chrono::Local;
@@ -79,6 +79,11 @@ pub async fn create_app(users_db_url: &str, need_to_clear: bool) -> Router {
         .route("/login", post(login))
         .route("/personal_data", put(update_personal_data))
         .route("/personal_data", get(get_personal_data))
+        .route("/create_task", post(create_task))
+        .route("/update_task", put(update_task))
+        .route("/delete_task", delete(delete_task))
+        .route("/get_task", get(get_task))
+        .route("/list_tasks", get(list_tasks))
         .with_state(shared_state)
 }
 
@@ -381,4 +386,121 @@ async fn get_personal_data(State(state): State<Arc<AppState>>, headers: HeaderMa
         },
         Err(_) => (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
     }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreateTaskRequest {
+    text: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UpdateTaskRequest {
+    task_id: i64,
+    new_text: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DeleteTaskRequest {
+    task_id: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GetTaskRequest {
+    task_id: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ListTasksRequest {
+    offset: i64,
+    limit: i64,
+}
+
+async fn create_task(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(input_payload): Json<CreateTaskRequest>,
+) -> Response {
+    let username = match check_authorization(headers).await {
+        CheckAuthorizationResult::Username(username) => username,
+        CheckAuthorizationResult::NoToken => {
+            return (StatusCode::UNAUTHORIZED, "Token is missing").into_response();
+        }
+        CheckAuthorizationResult::Invalid => {
+            return (StatusCode::UNAUTHORIZED, "Invalid token").into_response();
+        }
+    };
+
+    (StatusCode::OK).into_response()
+}
+
+async fn update_task(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(input_payload): Json<UpdateTaskRequest>,
+) -> Response {
+    let username = match check_authorization(headers).await {
+        CheckAuthorizationResult::Username(username) => username,
+        CheckAuthorizationResult::NoToken => {
+            return (StatusCode::UNAUTHORIZED, "Token is missing").into_response();
+        }
+        CheckAuthorizationResult::Invalid => {
+            return (StatusCode::UNAUTHORIZED, "Invalid token").into_response();
+        }
+    };
+
+    (StatusCode::OK).into_response()
+}
+
+async fn delete_task(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(input_payload): Json<DeleteTaskRequest>,
+) -> Response {
+    let username = match check_authorization(headers).await {
+        CheckAuthorizationResult::Username(username) => username,
+        CheckAuthorizationResult::NoToken => {
+            return (StatusCode::UNAUTHORIZED, "Token is missing").into_response();
+        }
+        CheckAuthorizationResult::Invalid => {
+            return (StatusCode::UNAUTHORIZED, "Invalid token").into_response();
+        }
+    };
+
+    (StatusCode::OK).into_response()
+}
+
+async fn get_task(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(input_payload): Json<GetTaskRequest>,
+) -> Response {
+    let username = match check_authorization(headers).await {
+        CheckAuthorizationResult::Username(username) => username,
+        CheckAuthorizationResult::NoToken => {
+            return (StatusCode::UNAUTHORIZED, "Token is missing").into_response();
+        }
+        CheckAuthorizationResult::Invalid => {
+            return (StatusCode::UNAUTHORIZED, "Invalid token").into_response();
+        }
+    };
+
+    (StatusCode::OK).into_response()
+}
+
+async fn list_tasks(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(input_payload): Json<ListTasksRequest>,
+) -> Response {
+    let username = match check_authorization(headers).await {
+        CheckAuthorizationResult::Username(username) => username,
+        CheckAuthorizationResult::NoToken => {
+            return (StatusCode::UNAUTHORIZED, "Token is missing").into_response();
+        }
+        CheckAuthorizationResult::Invalid => {
+            return (StatusCode::UNAUTHORIZED, "Invalid token").into_response();
+        }
+    };
+
+    (StatusCode::OK).into_response()
 }
