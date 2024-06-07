@@ -1,7 +1,7 @@
 use std::error::Error;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    tonic_build::compile_protos("../tasks_service/tasks.proto")?;
+    tonic_build::compile_protos("tasks.proto")?;
 
     Ok(())
 }

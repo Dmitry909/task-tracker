@@ -197,13 +197,15 @@ async fn signup(
 
 #[derive(Debug, Serialize, Deserialize)]
 struct TokenData {
+    id: i64,
     username: String,
     exp: usize,
 }
 
-fn generate_token(username: &String) -> String {
+fn generate_token(id: i64, username: &String) -> String {
     let secret = b"my_secret_key_d47fjs&w3)wj";
     let token_data = TokenData {
+        id,
         username: username.clone(),
         exp: (Local::now() + chrono::Duration::hours(24)).timestamp() as usize,
     };
@@ -227,39 +229,35 @@ async fn login(
     Json(input_payload): Json<LoginRequest>,
 ) -> Response {
     let query_result = sqlx::query(&format!(
-        "SELECT COUNT(*) FROM users WHERE username='{}' and password_hash='{}'",
+        "SELECT * FROM users WHERE username='{}' and password_hash='{}'",
         &input_payload.username,
         &get_hash(&input_payload.password),
     ))
-    .fetch_one(&state.pool)
+    .fetch_optional(&state.pool)
     .await;
 
-    match query_result {
-        Ok(count) => {
-            let q: Result<i64, sqlx::Error> = count.try_get(0);
-            match q {
-                Ok(count) => match count {
-                    1 => {}
-                    _ => {
-                        return (StatusCode::UNAUTHORIZED).into_response();
-                    }
-                },
-                Err(_) => {
-                    return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
-                }
+    let row = match query_result {
+        Ok(row_opt) => match row_opt {
+            Some(row) => {
+                let id: i64 = row.try_get("id").unwrap();
+                let username: String = row.try_get("username").unwrap();
+                (id, username)
             }
-        }
+            None => {
+                return (StatusCode::UNAUTHORIZED).into_response();
+            }
+        },
         Err(_) => {
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     };
 
-    let token = generate_token(&input_payload.username);
+    let token = generate_token(row.0, &row.1);
     (StatusCode::OK, [("Authorization", token)]).into_response()
 }
 
 enum CheckAuthorizationResult {
-    Username(String),
+    IdAndUsername((i64, String)),
     NoToken,
     Invalid,
 }
@@ -276,7 +274,7 @@ async fn check_authorization(headers: HeaderMap) -> CheckAuthorizationResult {
         }
     };
 
-    return CheckAuthorizationResult::Username(decoded_token.username);
+    return CheckAuthorizationResult::IdAndUsername((decoded_token.id, decoded_token.username));
 }
 
 async fn update_personal_data(
@@ -284,8 +282,8 @@ async fn update_personal_data(
     headers: HeaderMap,
     Json(input_payload): Json<UpdateUserDataRequest>,
 ) -> Response {
-    let username = match check_authorization(headers).await {
-        CheckAuthorizationResult::Username(username) => username,
+    let id_and_username = match check_authorization(headers).await {
+        CheckAuthorizationResult::IdAndUsername(username) => username,
         CheckAuthorizationResult::NoToken => {
             return (StatusCode::UNAUTHORIZED, "Token is missing").into_response();
         }
@@ -337,7 +335,7 @@ async fn update_personal_data(
     let query = format!(
         "UPDATE users SET {} WHERE username='{}' RETURNING *",
         set_vector.join(", "),
-        username
+        id_and_username.1
     );
 
     let query_result = sqlx::query(&query).fetch_optional(&state.pool).await;
@@ -359,8 +357,8 @@ pub struct GetUserDataResponse {
 }
 
 async fn get_personal_data(State(state): State<Arc<AppState>>, headers: HeaderMap) -> Response {
-    let username = match check_authorization(headers).await {
-        CheckAuthorizationResult::Username(username) => username,
+    let id_and_username = match check_authorization(headers).await {
+        CheckAuthorizationResult::IdAndUsername(username) => username,
         CheckAuthorizationResult::NoToken => {
             return (StatusCode::UNAUTHORIZED, "Token is missing").into_response();
         }
@@ -371,7 +369,7 @@ async fn get_personal_data(State(state): State<Arc<AppState>>, headers: HeaderMa
 
     let query_result = sqlx::query(&format!(
         "SELECT first_name, second_name, email, phone_number FROM users WHERE username='{}'",
-        &username
+        &id_and_username.1
     ))
     .fetch_optional(&state.pool)
     .await;
@@ -404,12 +402,12 @@ pub struct CreateTaskRequest1 {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateTaskResponse1 {
-    task_id: i32,
+    task_id: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UpdateTaskRequest1 {
-    task_id: i32,
+    task_id: i64,
     new_text: String,
 }
 
@@ -430,12 +428,11 @@ pub struct ListTasksRequest1 {
 }
 
 async fn create_task(
-    State(state): State<Arc<AppState>>,
     headers: HeaderMap,
     Json(input_payload): Json<CreateTaskRequest1>,
 ) -> Response {
-    let username = match check_authorization(headers).await {
-        CheckAuthorizationResult::Username(username) => username,
+    let id_and_username = match check_authorization(headers).await {
+        CheckAuthorizationResult::IdAndUsername(username) => username,
         CheckAuthorizationResult::NoToken => {
             return (StatusCode::UNAUTHORIZED, "Token is missing").into_response();
         }
@@ -444,17 +441,20 @@ async fn create_task(
         }
     };
 
-    let url = "http://localhost:23456";
+    println!("1");
+    let url = "http://tasks_service::50051";
     let mut client = match TaskServiceClient::connect(url).await {
         Ok(client) => client,
         Err(_) => {
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     };
+    println!("2");
     let req = proto::CreateTaskRequest {
-        author_id: 1, // TODO add
+        author_id: id_and_username.0, // TODO add
         text: input_payload.text,
     };
+    println!("3");
     let request = tonic::Request::new(req);
     let response = match client.create_task(request).await {
         Ok(response) => response,
@@ -463,6 +463,7 @@ async fn create_task(
         }
     };
 
+    println!("4");
     let resp = CreateTaskResponse1 {
         task_id: response.get_ref().task_id,
     };
@@ -470,12 +471,11 @@ async fn create_task(
 }
 
 async fn update_task(
-    State(state): State<Arc<AppState>>,
     headers: HeaderMap,
     Json(input_payload): Json<UpdateTaskRequest1>,
 ) -> Response {
-    let username = match check_authorization(headers).await {
-        CheckAuthorizationResult::Username(username) => username,
+    let id_and_username = match check_authorization(headers).await {
+        CheckAuthorizationResult::IdAndUsername(username) => username,
         CheckAuthorizationResult::NoToken => {
             return (StatusCode::UNAUTHORIZED, "Token is missing").into_response();
         }
@@ -484,7 +484,7 @@ async fn update_task(
         }
     };
 
-    let url = "http://localhost:23456";
+    let url = "http://tasks_service::50051";
     let mut client = match TaskServiceClient::connect(url).await {
         Ok(client) => client,
         Err(_) => {
@@ -492,7 +492,7 @@ async fn update_task(
         }
     };
     let req = proto::UpdateTaskRequest {
-        user_id: 1, // TODO add
+        user_id: id_and_username.0,
         task_id: input_payload.task_id,
         new_text: input_payload.new_text,
     };
@@ -508,12 +508,11 @@ async fn update_task(
 }
 
 async fn delete_task(
-    State(state): State<Arc<AppState>>,
     headers: HeaderMap,
     Json(input_payload): Json<DeleteTaskRequest1>,
 ) -> Response {
-    let username = match check_authorization(headers).await {
-        CheckAuthorizationResult::Username(username) => username,
+    let id_and_username = match check_authorization(headers).await {
+        CheckAuthorizationResult::IdAndUsername(username) => username,
         CheckAuthorizationResult::NoToken => {
             return (StatusCode::UNAUTHORIZED, "Token is missing").into_response();
         }
@@ -526,12 +525,11 @@ async fn delete_task(
 }
 
 async fn get_task(
-    State(state): State<Arc<AppState>>,
     headers: HeaderMap,
     Json(input_payload): Json<GetTaskRequest1>,
 ) -> Response {
-    let username = match check_authorization(headers).await {
-        CheckAuthorizationResult::Username(username) => username,
+    let id_and_username = match check_authorization(headers).await {
+        CheckAuthorizationResult::IdAndUsername(username) => username,
         CheckAuthorizationResult::NoToken => {
             return (StatusCode::UNAUTHORIZED, "Token is missing").into_response();
         }
@@ -544,12 +542,11 @@ async fn get_task(
 }
 
 async fn list_tasks(
-    State(state): State<Arc<AppState>>,
     headers: HeaderMap,
     Json(input_payload): Json<ListTasksRequest1>,
 ) -> Response {
-    let username = match check_authorization(headers).await {
-        CheckAuthorizationResult::Username(username) => username,
+    let id_and_username = match check_authorization(headers).await {
+        CheckAuthorizationResult::IdAndUsername(username) => username,
         CheckAuthorizationResult::NoToken => {
             return (StatusCode::UNAUTHORIZED, "Token is missing").into_response();
         }

@@ -8,7 +8,7 @@ Content-Type: application/json
 }
 
 ###
-POST http://127.0.0.1:4000/login
+POST http://127.0.0.1:5000/login
 Content-Type: application/json
 
 {
@@ -17,33 +17,8 @@ Content-Type: application/json
 }
 
 ###
-PUT http://127.0.0.1:4000/personal_data
-Authorization: 
-Content-Type: application/json
-
-{
-    "first_name": "qqqqqqqqqqqqqqqqqqqq",
-    "second_name": "www"
-}
-
-###
-PUT http://127.0.0.1:4000/personal_data
-Authorization: 
-Content-Type: application/json
-
-{
-    "first_name": "dfdsafd",
-    "email": "gsdg"
-}
-
-###
-GET http://127.0.0.1:4000/personal_data
-Authorization: 
-Content-Type: application/json
-
-###
-POST http://127.0.0.1:4000/create_task
-Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6ImFsZXgxIiwiZXhwIjoxNzE3ODUxMTcwfQ.WBFHMEHY-pqubOLGjVb9rr-GtnL57c5T0c51-eyveMc
+POST http://127.0.0.1:5000/create_task
+Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6MTgsInVzZXJuYW1lIjoiYWxleDEiLCJleHAiOjE3MTc4NTgwNjN9.NDFbHyfeLviJtBmmVl5ncDHleirmmz_gawetCyKTOm8
 Content-Type: application/json
 
 {
@@ -52,11 +27,11 @@ Content-Type: application/json
 
 ###
 GET http://127.0.0.1:4000/get_task
-Authorization: 
+Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6MTgsInVzZXJuYW1lIjoiYWxleDEiLCJleHAiOjE3MTc4NTgwNjN9.NDFbHyfeLviJtBmmVl5ncDHleirmmz_gawetCyKTOm8
 Content-Type: application/json
 
 {
-    "task_id": "147"
+    "task_id": 149
 }
 
 ###
@@ -65,7 +40,7 @@ Authorization:
 Content-Type: application/json
 
 {
-    "task_id": "",
+    "task_id": ,
     "new_text": "Task text"
 }
 

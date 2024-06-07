@@ -1,0 +1,42 @@
+###
+POST http://127.0.0.1:4000/signup
+Content-Type: application/json
+
+{
+    "username": "alex1",
+    "password": "alex1990*A"
+}
+
+###
+POST http://127.0.0.1:4000/login
+Content-Type: application/json
+
+{
+    "username": "alex1",
+    "password": "alex1990*A"
+}
+
+###
+PUT http://127.0.0.1:4000/personal_data
+Authorization: 
+Content-Type: application/json
+
+{
+    "first_name": "qqqqqqqqqqqqqqqqqqqq",
+    "second_name": "www"
+}
+
+###
+PUT http://127.0.0.1:4000/personal_data
+Authorization: 
+Content-Type: application/json
+
+{
+    "first_name": "dfdsafd",
+    "email": "gsdg"
+}
+
+###
+GET http://127.0.0.1:4000/personal_data
+Authorization: 
+Content-Type: application/json

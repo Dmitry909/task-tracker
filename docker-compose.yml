@@ -1,24 +1,25 @@
 services:
-  # main_service_db:
-  #   build: ./main_service_db/
-  #   restart: always
-  #   container_name: main_service_db
-  #   environment:
-  #     POSTGRES_USER: postgres
-  #     POSTGRES_PASSWORD: my_password
-  #     POSTGRES_DB: main_service_soa
-  #   ports:
-  #     - "2345:5432"
+  main_service_db:
+    build: ./main_service_db/
+    restart: always
+    container_name: main_service_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: my_password
+      POSTGRES_DB: main_service_soa
+    ports:
+      - "2345:5432"
 
-  # main_service:
-  #   build: ./main_service
-  #   environment:
-  #     DATABASE_URL: postgres://postgres:my_password@main_service_db:5432/main_service_soa
-  #   command: sh -c "sleep 10s; cargo run -- 4000"
-  #   ports:
-  #     - "4000:4000"
-  #   depends_on:
-  #     - main_service_db
+  main_service:
+    build: ./main_service
+    environment:
+      DATABASE_URL: postgres://postgres:my_password@main_service_db:5432/main_service_soa
+    command: sh -c "sleep 10s; cargo run -- 4000"
+    ports:
+      - "4000:4000"
+    depends_on:
+      - main_service_db
+      - tasks_service
 
   tasks_service_db:
     build: ./tasks_service_db/
@@ -41,6 +42,6 @@ services:
       DATABASE_PASSWORD: my_password
     command: sh -c "ls ; sleep 10s ; python3 server.py"
     ports:
-      - "23456:50051"
+      - "50051:50051"
     depends_on:
       - tasks_service_db
