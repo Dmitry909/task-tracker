@@ -458,7 +458,7 @@ async fn create_task(
     };
     println!("2");
     let req = proto::CreateTaskRequest {
-        author_id: id_and_username.0, // TODO add
+        author_id: id_and_username.0,
         text: input_payload.text,
     };
     println!("3");
@@ -601,6 +601,7 @@ async fn list_tasks(headers: HeaderMap, Json(input_payload): Json<ListTasksReque
         }
     };
 
+    println!("!!1");
     let url = "http://tasks_service:50051";
     let mut client = match TaskServiceClient::connect(url).await {
         Ok(client) => client,
@@ -608,18 +609,21 @@ async fn list_tasks(headers: HeaderMap, Json(input_payload): Json<ListTasksReque
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     };
+    println!("!!2");
     let req = proto::ListTasksRequest {
-        user_id: id_and_username.0, // TODO add
+        user_id: id_and_username.0,
         offset: input_payload.offset,
         limit: input_payload.limit,
     };
     let request = tonic::Request::new(req);
     let response = match client.list_tasks(request).await {
         Ok(response) => response,
-        Err(_) => {
+        Err(e) => {
+            println!("{}", e);
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     };
+    println!("!!3");
 
     let tasks: Vec<GetTaskResponse1> = response
         .get_ref()
@@ -633,5 +637,6 @@ async fn list_tasks(headers: HeaderMap, Json(input_payload): Json<ListTasksReque
         })
         .collect();
 
+    println!("!!4");
     (StatusCode::OK, Json(tasks)).into_response()
 }

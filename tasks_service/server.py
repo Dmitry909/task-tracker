@@ -70,8 +70,8 @@ class TaskService(tasks_pb2_grpc.TaskServiceServicer):
         return tasks_pb2.GetTaskResponse(task_id=task[0], author_id=task[1], text=task[2])
 
     def ListTasks(self, request, context):
-        if not request.user_id or not request.offset or not request.limit:
-            raise ValueError("user_id, offset or limit is missing or empty")
+        # if not request.user_id or not request.offset or not request.limit:
+        #     raise ValueError("user_id, offset or limit is missing or empty")
         # TODO а здесь порядок гарантирован?
         self.cur.execute("SELECT task_id, author_id, text FROM tasks WHERE author_id = %s LIMIT %s OFFSET %s;",
                          (request.user_id, request.limit, request.offset))
