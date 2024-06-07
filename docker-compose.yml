@@ -41,6 +41,6 @@ services:
       DATABASE_PASSWORD: my_password
     command: sh -c "ls ; sleep 10s ; python3 server.py"
     ports:
-      - ":50051"
+      - "23456:50051"
     depends_on:
       - tasks_service_db
