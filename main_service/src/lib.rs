@@ -1,18 +1,27 @@
 use axum::{
     extract::State,
-    http::{HeaderMap, StatusCode},
+    http::{request, response, HeaderMap, StatusCode},
     response::{IntoResponse, Response},
-    routing::{get, post, put, delete},
+    routing::{delete, get, post, put},
     Json, Router,
 };
 use chrono::Local;
 use chrono::NaiveDate;
 use hex;
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
+use proto::task_service_client::TaskServiceClient;
+use proto::{
+    CreateTaskRequest, DeleteTaskRequest, GetTaskRequest, ListTasksRequest, UpdateTaskRequest,
+};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres, Row};
-use std::{str, sync::Arc, thread, time::Duration};
+use std::{borrow::Borrow, str, sync::Arc, thread, time::Duration};
+use tonic;
+
+pub mod proto {
+    tonic::include_proto!("tasks");
+}
 
 pub async fn create_pool(database_url: &str) -> Pool<Postgres> {
     let mut attempts = 0;
@@ -389,28 +398,28 @@ async fn get_personal_data(State(state): State<Arc<AppState>>, headers: HeaderMa
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct CreateTaskRequest {
+pub struct CreateTaskRequest1 {
     text: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct UpdateTaskRequest {
+pub struct UpdateTaskRequest1 {
     task_id: i64,
     new_text: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct DeleteTaskRequest {
+pub struct DeleteTaskRequest1 {
     task_id: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct GetTaskRequest {
+pub struct GetTaskRequest1 {
     task_id: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct ListTasksRequest {
+pub struct ListTasksRequest1 {
     offset: i64,
     limit: i64,
 }
@@ -418,7 +427,7 @@ pub struct ListTasksRequest {
 async fn create_task(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
-    Json(input_payload): Json<CreateTaskRequest>,
+    Json(input_payload): Json<CreateTaskRequest1>,
 ) -> Response {
     let username = match check_authorization(headers).await {
         CheckAuthorizationResult::Username(username) => username,
@@ -430,13 +439,34 @@ async fn create_task(
         }
     };
 
+    let url = "http://localhost:23456";
+    let mut client = match TaskServiceClient::connect(url).await {
+        Ok(client) => client,
+        Err(_) => {
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
+    let req = proto::CreateTaskRequest {
+        author_id: 1,
+        text: input_payload.text,
+    };
+    let request = tonic::Request::new(req);
+    let response = match client.create_task(request).await {
+        Ok(response) => response,
+        Err(_) => {
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
+
+    println!("{}", response.get_ref().task_id);
+
     (StatusCode::OK).into_response()
 }
 
 async fn update_task(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
-    Json(input_payload): Json<UpdateTaskRequest>,
+    Json(input_payload): Json<UpdateTaskRequest1>,
 ) -> Response {
     let username = match check_authorization(headers).await {
         CheckAuthorizationResult::Username(username) => username,
@@ -454,7 +484,7 @@ async fn update_task(
 async fn delete_task(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
-    Json(input_payload): Json<DeleteTaskRequest>,
+    Json(input_payload): Json<DeleteTaskRequest1>,
 ) -> Response {
     let username = match check_authorization(headers).await {
         CheckAuthorizationResult::Username(username) => username,
@@ -472,7 +502,7 @@ async fn delete_task(
 async fn get_task(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
-    Json(input_payload): Json<GetTaskRequest>,
+    Json(input_payload): Json<GetTaskRequest1>,
 ) -> Response {
     let username = match check_authorization(headers).await {
         CheckAuthorizationResult::Username(username) => username,
@@ -490,7 +520,7 @@ async fn get_task(
 async fn list_tasks(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
-    Json(input_payload): Json<ListTasksRequest>,
+    Json(input_payload): Json<ListTasksRequest1>,
 ) -> Response {
     let username = match check_authorization(headers).await {
         CheckAuthorizationResult::Username(username) => username,
