@@ -16,8 +16,11 @@ use proto::{
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres, Row};
+use tracing_subscriber::field::RecordFields;
 use std::{borrow::Borrow, str, sync::Arc, thread, time::Duration};
 use tonic;
+use rdkafka::{ClientConfig, Timestamp};
+use rdkafka::producer::FutureProducer;
 
 pub mod proto {
     tonic::include_proto!("tasks");
@@ -93,6 +96,8 @@ pub async fn create_app(users_db_url: &str, need_to_clear: bool) -> Router {
         .route("/delete_task", delete(delete_task))
         .route("/get_task", get(get_task))
         .route("/list_tasks", get(list_tasks))
+        .route("/like", post(like))
+        .route("/view", post(view))
         .with_state(shared_state)
 }
 
@@ -608,4 +613,32 @@ async fn list_tasks(Json(input_payload): Json<ListTasksRequest1>) -> Response {
         .collect();
 
     (StatusCode::OK, Json(tasks)).into_response()
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LikeOrViewRequest1 {
+    author_id: i64,
+    task_id: i64,
+}
+
+async fn like(Json(input_payload): Json<LikeOrViewRequest1>) -> Response {
+    let mut config = ClientConfig::new();
+    config.set("bootstrap.servers", "localhost:9092");
+
+    let producer : FutureProducer = config.create().expect("Couldn't create producer");
+
+    let record = FutureProducer::to("likes_topic").payload("qwe").key("Test-Key");
+
+    let status_delivery = producer.send(record, Timeout::After(Duration::from_secs(2))).await;
+
+    match status_delivery {
+        Ok(report) => println!("Message Send {:?}", report),
+        Err(e) => println!("Message Send {:?}", report),
+    };
+
+    (StatusCode::OK).into_response()
+}
+
+async fn view(Json(input_payload): Json<LikeOrViewRequest1>) -> Response {
+    (StatusCode::OK).into_response()
 }
