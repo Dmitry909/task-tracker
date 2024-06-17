@@ -23,8 +23,8 @@ def delete_task(user_id, task_id):
     return stub.DeleteTask(request)
 
 
-def get_task(user_id, task_id):
-    request = tasks_pb2.GetTaskRequest(user_id=user_id, task_id=task_id)
+def get_task(task_id):
+    request = tasks_pb2.GetTaskRequest(task_id=task_id)
     return stub.GetTask(request)
 
 

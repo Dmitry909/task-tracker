@@ -430,6 +430,7 @@ pub struct GetTaskResponse1 {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ListTasksRequest1 {
+    user_id: i64,
     offset: i64,
     limit: i64,
 }
@@ -448,7 +449,6 @@ async fn create_task(
         }
     };
 
-    println!("1");
     let url = "http://tasks_service:50051";
     let mut client = match TaskServiceClient::connect(url).await {
         Ok(client) => client,
@@ -456,12 +456,10 @@ async fn create_task(
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     };
-    println!("2");
     let req = proto::CreateTaskRequest {
         author_id: id_and_username.0,
         text: input_payload.text,
     };
-    println!("3");
     let request = tonic::Request::new(req);
     let response = match client.create_task(request).await {
         Ok(response) => response,
@@ -470,7 +468,6 @@ async fn create_task(
         }
     };
 
-    println!("4");
     let resp = CreateTaskResponse1 {
         task_id: response.get_ref().task_id,
     };
@@ -528,7 +525,6 @@ async fn delete_task(
         }
     };
 
-    println!("!1");
     let url = "http://tasks_service:50051";
     let mut client = match TaskServiceClient::connect(url).await {
         Ok(client) => client,
@@ -541,28 +537,16 @@ async fn delete_task(
         task_id: input_payload.task_id,
     };
     let request = tonic::Request::new(req);
-    println!("!2");
     match client.delete_task(request).await {
         Ok(_) => {}
         Err(_) => {
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     };
-    println!("!3");
     (StatusCode::OK).into_response()
 }
 
-async fn get_task(headers: HeaderMap, Json(input_payload): Json<GetTaskRequest1>) -> Response {
-    let id_and_username = match check_authorization(headers).await {
-        CheckAuthorizationResult::IdAndUsername(username) => username,
-        CheckAuthorizationResult::NoToken => {
-            return (StatusCode::UNAUTHORIZED, "Token is missing").into_response();
-        }
-        CheckAuthorizationResult::Invalid => {
-            return (StatusCode::UNAUTHORIZED, "Invalid token").into_response();
-        }
-    };
-
+async fn get_task(Json(input_payload): Json<GetTaskRequest1>) -> Response {
     let url = "http://tasks_service:50051";
     let mut client = match TaskServiceClient::connect(url).await {
         Ok(client) => client,
@@ -571,7 +555,6 @@ async fn get_task(headers: HeaderMap, Json(input_payload): Json<GetTaskRequest1>
         }
     };
     let req = proto::GetTaskRequest {
-        user_id: id_and_username.0, // TODO add
         task_id: input_payload.task_id,
     };
     let request = tonic::Request::new(req);
@@ -590,18 +573,7 @@ async fn get_task(headers: HeaderMap, Json(input_payload): Json<GetTaskRequest1>
     (StatusCode::CREATED, Json(resp)).into_response()
 }
 
-async fn list_tasks(headers: HeaderMap, Json(input_payload): Json<ListTasksRequest1>) -> Response {
-    let id_and_username = match check_authorization(headers).await {
-        CheckAuthorizationResult::IdAndUsername(username) => username,
-        CheckAuthorizationResult::NoToken => {
-            return (StatusCode::UNAUTHORIZED, "Token is missing").into_response();
-        }
-        CheckAuthorizationResult::Invalid => {
-            return (StatusCode::UNAUTHORIZED, "Invalid token").into_response();
-        }
-    };
-
-    println!("!!1");
+async fn list_tasks(Json(input_payload): Json<ListTasksRequest1>) -> Response {
     let url = "http://tasks_service:50051";
     let mut client = match TaskServiceClient::connect(url).await {
         Ok(client) => client,
@@ -609,9 +581,8 @@ async fn list_tasks(headers: HeaderMap, Json(input_payload): Json<ListTasksReque
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     };
-    println!("!!2");
     let req = proto::ListTasksRequest {
-        user_id: id_and_username.0,
+        user_id: input_payload.user_id,
         offset: input_payload.offset,
         limit: input_payload.limit,
     };
@@ -623,7 +594,6 @@ async fn list_tasks(headers: HeaderMap, Json(input_payload): Json<ListTasksReque
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     };
-    println!("!!3");
 
     let tasks: Vec<GetTaskResponse1> = response
         .get_ref()
@@ -637,6 +607,5 @@ async fn list_tasks(headers: HeaderMap, Json(input_payload): Json<ListTasksReque
         })
         .collect();
 
-    println!("!!4");
     (StatusCode::OK, Json(tasks)).into_response()
 }

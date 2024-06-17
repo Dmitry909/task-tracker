@@ -34,8 +34,7 @@ message DeleteTaskRequest {
 }
 
 message GetTaskRequest {
-    int64 user_id = 1;
-    int64 task_id = 2;
+    int64 task_id = 1;
 }
 
 message GetTaskResponse {

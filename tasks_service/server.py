@@ -58,14 +58,12 @@ class TaskService(tasks_pb2_grpc.TaskServiceServicer):
         return empty_pb2.Empty()
 
     def GetTask(self, request, context):
-        if not request.user_id or not request.task_id:
+        if not request.task_id:
             raise ValueError("user_id or task_id is missing or empty")
-        self.cur.execute(
-            "SELECT task_id, author_id, text FROM tasks WHERE task_id = %s;", (request.task_id,))
+        self.cur.execute("SELECT task_id, author_id, text FROM tasks WHERE task_id = %s;", (request.task_id,))
         task = self.cur.fetchone()
-        if not task or task[1] != request.user_id:
-            context.abort(grpc.StatusCode.PERMISSION_DENIED,
-                          "Permission Denied")
+        if not task:
+            context.abort(grpc.StatusCode.NOT_FOUND, "Task doesn't exist")
 
         return tasks_pb2.GetTaskResponse(task_id=task[0], author_id=task[1], text=task[2])
 
