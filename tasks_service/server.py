@@ -4,11 +4,11 @@ import grpc
 import psycopg2
 from google.protobuf import empty_pb2
 
-import tasks_pb2
-import tasks_pb2_grpc
+import common_pb2
+import common_pb2_grpc
 
 
-class TaskService(tasks_pb2_grpc.TaskServiceServicer):
+class TaskService(common_pb2_grpc.TaskServiceServicer):
     def __init__(self):
         print('__init__ called', file=sys.stderr)
         self.conn = psycopg2.connect(host=os.getenv("DATABASE_HOST"),
@@ -25,7 +25,7 @@ class TaskService(tasks_pb2_grpc.TaskServiceServicer):
                          (request.author_id, request.text))
         task_id = self.cur.fetchone()[0]
         self.conn.commit()
-        return tasks_pb2.CreateTaskResponse(task_id=task_id)
+        return common_pb2.CreateTaskResponse(task_id=task_id)
 
     def UpdateTask(self, request, context):
         if not request.user_id or not request.task_id or not request.new_text:
@@ -65,7 +65,7 @@ class TaskService(tasks_pb2_grpc.TaskServiceServicer):
         if not task:
             context.abort(grpc.StatusCode.NOT_FOUND, "Task doesn't exist")
 
-        return tasks_pb2.GetTaskResponse(task_id=task[0], author_id=task[1], text=task[2])
+        return common_pb2.GetTaskResponse(task_id=task[0], author_id=task[1], text=task[2])
 
     def ListTasks(self, request, context):
         # if not request.user_id or not request.offset or not request.limit:
@@ -75,24 +75,24 @@ class TaskService(tasks_pb2_grpc.TaskServiceServicer):
                          (request.user_id, request.limit, request.offset))
 
         tasks_rows = self.cur.fetchall()
-        tasks_list = [tasks_pb2.Task(task_id=row[0], author_id=row[1], text=row[2]) for row in tasks_rows]
+        tasks_list = [common_pb2.Task(task_id=row[0], author_id=row[1], text=row[2]) for row in tasks_rows]
 
-        return tasks_pb2.ListTasksResponse(tasks=tasks_list)
+        return common_pb2.ListTasksResponse(tasks=tasks_list)
 
     def SendLike(self, request, context):
         print(f'request.author_id: {request.author_id}, request.task_id: {request.task_id}, request.liker_id: {request.liker_id}')
         # TODO проверить что пост у этого автора существует и если да, то отправить в кафку
-        return tasks_pb2.EmptyMessage()
+        return common_pb2.EmptyMessage()
 
     def SendView(self, request, context):
         print(f'request.author_id: {request.author_id}, request.task_id: {request.task_id}, request.liker_id: {request.liker_id}')
         # TODO проверить что пост у этого автора существует и если да, то отправить в кафку
-        return tasks_pb2.EmptyMessage()
+        return common_pb2.EmptyMessage()
 
 
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    tasks_pb2_grpc.add_TaskServiceServicer_to_server(TaskService(), server)
+    common_pb2_grpc.add_TaskServiceServicer_to_server(TaskService(), server)
     server.add_insecure_port('[::]:50051')
     server.start()
     server.wait_for_termination()

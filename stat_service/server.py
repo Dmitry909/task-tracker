@@ -3,11 +3,11 @@ from concurrent import futures
 import grpc
 from google.protobuf import empty_pb2
 
-import stat_pb2
-import stat_pb2_grpc
+import common_pb2
+import common_pb2_grpc
 
 
-class StatService(stat_pb2_grpc.StatServiceServicer):
+class StatService(common_pb2_grpc.StatServiceServicer):
     def __init__(self):
         # self.conn = psycopg2.connect(host=os.getenv("DATABASE_HOST"),
         #                              port=os.getenv("DATABASE_PORT"),
@@ -18,12 +18,12 @@ class StatService(stat_pb2_grpc.StatServiceServicer):
         pass
 
     def Healthcheck(self, request, context):
-        return stat_pb2.HealthcheckResponse(aa=request.a ** 2)
+        return common_pb2.HealthcheckResponse(aa=request.a ** 2)
 
 
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    stat_pb2_grpc.add_StatServiceServicer_to_server(StatService(), server)
+    common_pb2_grpc.add_StatServiceServicer_to_server(StatService(), server)
     server.add_insecure_port('[::]:50052')
     server.start()
     server.wait_for_termination()

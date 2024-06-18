@@ -56,26 +56,35 @@ def test_tasks():
     login_resp = login(username, password)
     token = login_resp.headers["Authorization"]
 
-    qq = create_task('Do please', token)
-    print(qq)
-    task_id1 = json.loads(qq)["id"]
-    task_id2 = json.loads(create_task('Do asap please!!!', token).text)["id"]
+    create_resp1 = create_task('Do please', token)
+    assert create_resp1.status_code == 201
+    task_id1 = json.loads(create_resp1.text)["task_id"]
+    create_resp2 = create_task('Do asap please!!!', token)
+    assert create_resp2.status_code == 201
+    task_id2 = json.loads(create_resp2.text)["task_id"]
 
     assert task_id1 + 1 == task_id2
 
     print('test_tasks OK')
 
 
-# def test_like_view():
-#     username = random_str(10)
-#     password = 'aaaaaA1*'
+def test_like_view():
+    username = random_str(10)
+    password = 'aaaaaA1*'
 
-#     assert False
+    signup(username, password)
+    login_resp = login(username, password)
+    token = login_resp.headers["Authorization"]
+
+    create_resp1 = create_task('Do please', token)
+    assert create_resp1.status_code == 201
+    task_id1 = json.loads(create_resp1.text)["task_id"]
+
+    assert False
 
 
 def test_stat():
     hc_resp = healthcheck_stat()
-    print(hc_resp)
     assert hc_resp.status_code == 200
     
     print('test_stat OK')
