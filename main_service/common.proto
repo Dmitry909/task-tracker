@@ -72,7 +72,7 @@ message SendLikeOrViewRequest {
 }
 
 message HealthcheckRequest {
-    int64 aaa = 1;
+    int64 a = 1;
 }
 
 message HealthcheckResponse {

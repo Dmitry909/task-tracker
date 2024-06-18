@@ -18,8 +18,7 @@ class StatService(stat_pb2_grpc.StatServiceServicer):
         pass
 
     def Healthcheck(self, request, context):
-        print(f'request.a: {request.a}')
-        return stat_pb2.HealthcheckResponse(request.a ** 2)
+        return stat_pb2.HealthcheckResponse(aa=request.a ** 2)
 
 
 def serve():

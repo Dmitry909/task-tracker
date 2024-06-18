@@ -681,7 +681,7 @@ async fn healthcheck_stat() -> Response {
     eprintln!("@@@ Client created");
 
     let req = proto::HealthcheckRequest {
-        aaa: 4,
+        a: 4,
     };
     let request = tonic::Request::new(req);
     match client.healthcheck(request).await {

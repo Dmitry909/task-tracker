@@ -9,5 +9,5 @@ stub = stat_pb2_grpc.StatServiceStub(channel)
 
 
 def healthcheck(a):
-    request = stat_pb2.HealthcheckRequest(aaa=a)
+    request = stat_pb2.HealthcheckRequest(a=a)
     return stub.Healthcheck(request)
