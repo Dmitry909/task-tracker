@@ -9,6 +9,7 @@ use chrono::Local;
 use chrono::NaiveDate;
 use hex;
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
+use proto::{stat_service_client::StatServiceClient, HealthcheckRequest, HealthcheckResponse};
 use proto::{task_service_client::TaskServiceClient, CreateTaskResponse};
 use proto::{
     CreateTaskRequest, DeleteTaskRequest, GetTaskRequest, ListTasksRequest, UpdateTaskRequest,
@@ -21,7 +22,7 @@ use tonic;
 use tracing_subscriber::field::RecordFields;
 
 pub mod proto {
-    tonic::include_proto!("tasks");
+    tonic::include_proto!("common");
 }
 
 pub async fn create_pool(database_url: &str) -> Pool<Postgres> {
@@ -96,6 +97,7 @@ pub async fn create_app(users_db_url: &str, need_to_clear: bool) -> Router {
         .route("/list_tasks", get(list_tasks))
         .route("/like", post(like))
         .route("/view", post(view))
+        .route("/healthcheck_stat", get(healthcheck_stat))
         .with_state(shared_state)
 }
 
@@ -660,6 +662,32 @@ async fn view(Json(input_payload): Json<LikeOrViewRequest1>) -> Response {
     match client.send_view(request).await {
         Ok(_) => {}
         Err(_) => {
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
+
+    (StatusCode::OK).into_response()
+}
+
+async fn healthcheck_stat() -> Response {
+    let url = "http://stat_service:50052";
+    let mut client = match StatServiceClient::connect(url).await {
+        Ok(client) => client,
+        Err(_) => {
+            eprintln!("!!! Error creating client");
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
+    eprintln!("@@@ Client created");
+
+    let req = proto::HealthcheckRequest {
+        aaa: 4,
+    };
+    let request = tonic::Request::new(req);
+    match client.healthcheck(request).await {
+        Ok(_) => {}
+        Err(e) => {
+            eprintln!("!!! Error connecting by grpc: {:?}", e);
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     };

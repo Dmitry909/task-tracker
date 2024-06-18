@@ -24,3 +24,8 @@ def update_personal_data(token: str, json_data: dict):
 def get_personal_data(token: str):
     response = requests.get(f'{host}/personal_data', headers={"Authorization": token})
     return response
+
+
+def healthcheck_stat():
+    response = requests.get(f'{host}/healthcheck_stat')
+    return response

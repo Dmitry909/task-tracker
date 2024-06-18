@@ -47,4 +47,13 @@ def test_signup_login_update():
     print('test_signup_login_update OK')
 
 
+def test_stat():
+    hc_resp = healthcheck_stat()
+    print(hc_resp)
+    assert hc_resp.status_code == 200
+    
+    print('test_stat OK')
+
+
 test_signup_login_update()
+test_stat()

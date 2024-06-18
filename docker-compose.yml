@@ -77,6 +77,20 @@ services:
     volumes:
       - clickhouse_data:/var/lib/clickhouse
 
+  stat_service:
+    build: ./stat_service
+    # environment:
+    #   DATABASE_HOST: tasks_service_db
+    #   DATABASE_PORT: 5432
+    #   DATABASE_NAME: tasks_service_soa
+    #   DATABASE_USER: postgres
+    #   DATABASE_PASSWORD: my_password
+    command: sh -c "ls ; sleep 10s ; python3 server.py"
+    ports:
+      - "50052:50052"
+    depends_on:
+      - clickhouse
+      - kafka
 
 volumes:
   kafka_data:
