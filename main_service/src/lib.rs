@@ -618,7 +618,6 @@ async fn list_tasks(Json(input_payload): Json<ListTasksRequest1>) -> Response {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LikeOrViewRequest1 {
-    author_id: i64,
     task_id: i64,
 }
 
@@ -642,7 +641,6 @@ async fn like(headers: HeaderMap, Json(input_payload): Json<LikeOrViewRequest1>)
     };
 
     let req = proto::SendLikeOrViewRequest {
-        author_id: input_payload.author_id,
         task_id: input_payload.task_id,
         liker_id: id_and_username.0,
     };
@@ -677,7 +675,6 @@ async fn view(headers: HeaderMap, Json(input_payload): Json<LikeOrViewRequest1>)
     };
 
     let req = proto::SendLikeOrViewRequest {
-        author_id: input_payload.author_id,
         task_id: input_payload.task_id,
         liker_id: id_and_username.0,
     };

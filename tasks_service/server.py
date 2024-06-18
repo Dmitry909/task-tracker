@@ -18,6 +18,13 @@ class TaskService(common_pb2_grpc.TaskServiceServicer):
                                      password=os.getenv("DATABASE_PASSWORD"))
         self.cur = self.conn.cursor()
 
+    def get_author_id_of_task(self, task_id):
+        self.cur.execute("SELECT author_id FROM tasks WHERE task_id = %s;", (task_id))
+        row = self.cur.fetchone()
+        if not row:
+            return None
+        return row[0]
+
     def CreateTask(self, request, context):
         if not request.author_id or not request.text:
             raise ValueError("author_id or text is missing or empty")
@@ -45,8 +52,7 @@ class TaskService(common_pb2_grpc.TaskServiceServicer):
     def DeleteTask(self, request, context):
         if not request.user_id or not request.task_id:
             raise ValueError("user_id or task_id is missing or empty")
-        self.cur.execute(
-            "SELECT author_id FROM tasks WHERE task_id = %s;", (request.task_id,))
+        self.cur.execute("SELECT author_id FROM tasks WHERE task_id = %s;", (request.task_id,))
         task = self.cur.fetchone()
         if not task or task[0] != request.user_id:
             context.abort(grpc.StatusCode.PERMISSION_DENIED,
@@ -80,13 +86,17 @@ class TaskService(common_pb2_grpc.TaskServiceServicer):
         return common_pb2.ListTasksResponse(tasks=tasks_list)
 
     def SendLike(self, request, context):
-        print(f'request.author_id: {request.author_id}, request.task_id: {request.task_id}, request.liker_id: {request.liker_id}')
-        # TODO проверить что пост у этого автора существует и если да, то отправить в кафку
+        author_id = self.get_author_id_of_task(request.task_id)
+        if not author_id:
+            raise ValueError("No such task_id")
+        # TODO send to kafka here
         return common_pb2.EmptyMessage()
 
     def SendView(self, request, context):
-        print(f'request.author_id: {request.author_id}, request.task_id: {request.task_id}, request.liker_id: {request.liker_id}')
-        # TODO проверить что пост у этого автора существует и если да, то отправить в кафку
+        author_id = self.get_author_id_of_task(request.task_id)
+        if not author_id:
+            raise ValueError("No such task_id")
+        # TODO send to kafka here
         return common_pb2.EmptyMessage()
 
 

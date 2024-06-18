@@ -67,9 +67,8 @@ message Task {
 }
 
 message SendLikeOrViewRequest {
-    int64 author_id = 1;
-    int64 task_id = 2;
-    int64 liker_id = 3;
+    int64 task_id = 1;
+    int64 liker_id = 2;
 }
 
 message HealthcheckRequest {
