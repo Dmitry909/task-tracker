@@ -1,6 +1,7 @@
 from common import *
 import random
 from string import ascii_lowercase, digits, ascii_uppercase
+import json
 
 
 def random_str(length):
@@ -47,6 +48,31 @@ def test_signup_login_update():
     print('test_signup_login_update OK')
 
 
+def test_tasks():
+    username = random_str(10)
+    password = 'aaaaaA1*'
+
+    signup(username, password)
+    login_resp = login(username, password)
+    token = login_resp.headers["Authorization"]
+
+    qq = create_task('Do please', token)
+    print(qq)
+    task_id1 = json.loads(qq)["id"]
+    task_id2 = json.loads(create_task('Do asap please!!!', token).text)["id"]
+
+    assert task_id1 + 1 == task_id2
+
+    print('test_tasks OK')
+
+
+# def test_like_view():
+#     username = random_str(10)
+#     password = 'aaaaaA1*'
+
+#     assert False
+
+
 def test_stat():
     hc_resp = healthcheck_stat()
     print(hc_resp)
@@ -56,4 +82,5 @@ def test_stat():
 
 
 test_signup_login_update()
+test_tasks()
 test_stat()

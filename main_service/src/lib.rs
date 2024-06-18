@@ -468,7 +468,8 @@ async fn create_task(
     let request = tonic::Request::new(req);
     let response = match client.create_task(request).await {
         Ok(response) => response,
-        Err(_) => {
+        Err(e) => {
+            println!("Error creating task: {:?}", e);
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     };
@@ -621,7 +622,17 @@ pub struct LikeOrViewRequest1 {
     task_id: i64,
 }
 
-async fn like(Json(input_payload): Json<LikeOrViewRequest1>) -> Response {
+async fn like(headers: HeaderMap, Json(input_payload): Json<LikeOrViewRequest1>) -> Response {
+    let id_and_username = match check_authorization(headers).await {
+        CheckAuthorizationResult::IdAndUsername(username) => username,
+        CheckAuthorizationResult::NoToken => {
+            return (StatusCode::UNAUTHORIZED, "Token is missing").into_response();
+        }
+        CheckAuthorizationResult::Invalid => {
+            return (StatusCode::UNAUTHORIZED, "Invalid token").into_response();
+        }
+    };
+    
     let url = "http://tasks_service:50051";
     let mut client = match TaskServiceClient::connect(url).await {
         Ok(client) => client,
@@ -633,6 +644,7 @@ async fn like(Json(input_payload): Json<LikeOrViewRequest1>) -> Response {
     let req = proto::SendLikeOrViewRequest {
         author_id: input_payload.author_id,
         task_id: input_payload.task_id,
+        liker_id: id_and_username.0,
     };
     let request = tonic::Request::new(req);
     match client.send_like(request).await {
@@ -645,7 +657,17 @@ async fn like(Json(input_payload): Json<LikeOrViewRequest1>) -> Response {
     (StatusCode::OK).into_response()
 }
 
-async fn view(Json(input_payload): Json<LikeOrViewRequest1>) -> Response {
+async fn view(headers: HeaderMap, Json(input_payload): Json<LikeOrViewRequest1>) -> Response {
+    let id_and_username = match check_authorization(headers).await {
+        CheckAuthorizationResult::IdAndUsername(username) => username,
+        CheckAuthorizationResult::NoToken => {
+            return (StatusCode::UNAUTHORIZED, "Token is missing").into_response();
+        }
+        CheckAuthorizationResult::Invalid => {
+            return (StatusCode::UNAUTHORIZED, "Invalid token").into_response();
+        }
+    };
+    
     let url = "http://tasks_service:50051";
     let mut client = match TaskServiceClient::connect(url).await {
         Ok(client) => client,
@@ -657,6 +679,7 @@ async fn view(Json(input_payload): Json<LikeOrViewRequest1>) -> Response {
     let req = proto::SendLikeOrViewRequest {
         author_id: input_payload.author_id,
         task_id: input_payload.task_id,
+        liker_id: id_and_username.0,
     };
     let request = tonic::Request::new(req);
     match client.send_view(request).await {
@@ -680,9 +703,7 @@ async fn healthcheck_stat() -> Response {
     };
     eprintln!("@@@ Client created");
 
-    let req = proto::HealthcheckRequest {
-        a: 4,
-    };
+    let req = proto::HealthcheckRequest { a: 4 };
     let request = tonic::Request::new(req);
     match client.healthcheck(request).await {
         Ok(_) => {}

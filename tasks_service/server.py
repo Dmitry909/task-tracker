@@ -75,10 +75,19 @@ class TaskService(tasks_pb2_grpc.TaskServiceServicer):
                          (request.user_id, request.limit, request.offset))
 
         tasks_rows = self.cur.fetchall()
-        tasks_list = [tasks_pb2.Task(
-            task_id=row[0], author_id=row[1], text=row[2]) for row in tasks_rows]
+        tasks_list = [tasks_pb2.Task(task_id=row[0], author_id=row[1], text=row[2]) for row in tasks_rows]
 
         return tasks_pb2.ListTasksResponse(tasks=tasks_list)
+
+    def SendLike(self, request, context):
+        print(f'request.author_id: {request.author_id}, request.task_id: {request.task_id}, request.liker_id: {request.liker_id}')
+        # TODO проверить что пост у этого автора существует и если да, то отправить в кафку
+        return tasks_pb2.EmptyMessage()
+
+    def SendView(self, request, context):
+        print(f'request.author_id: {request.author_id}, request.task_id: {request.task_id}, request.liker_id: {request.liker_id}')
+        # TODO проверить что пост у этого автора существует и если да, то отправить в кафку
+        return tasks_pb2.EmptyMessage()
 
 
 def serve():
