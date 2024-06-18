@@ -8,6 +8,9 @@ service TaskService {
     rpc DeleteTask (DeleteTaskRequest) returns (EmptyMessage);
     rpc GetTask (GetTaskRequest) returns (GetTaskResponse);
     rpc ListTasks (ListTasksRequest) returns (ListTasksResponse);
+
+    rpc SendLike (SendLikeOrViewRequest) returns (EmptyMessage);
+    rpc SendView (SendLikeOrViewRequest) returns (EmptyMessage);
 }
 
 message EmptyMessage {
@@ -57,4 +60,9 @@ message Task {
     int64 task_id = 1;
     int64 author_id = 2;
     string text = 3;
+}
+
+message SendLikeOrViewRequest {
+    int64 author_id = 1;
+    int64 task_id = 2;
 }

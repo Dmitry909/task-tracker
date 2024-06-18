@@ -16,11 +16,9 @@ use proto::{
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres, Row};
-use tracing_subscriber::field::RecordFields;
 use std::{borrow::Borrow, str, sync::Arc, thread, time::Duration};
 use tonic;
-use rdkafka::{ClientConfig, Timestamp};
-use rdkafka::producer::FutureProducer;
+use tracing_subscriber::field::RecordFields;
 
 pub mod proto {
     tonic::include_proto!("tasks");
@@ -622,23 +620,49 @@ pub struct LikeOrViewRequest1 {
 }
 
 async fn like(Json(input_payload): Json<LikeOrViewRequest1>) -> Response {
-    let mut config = ClientConfig::new();
-    config.set("bootstrap.servers", "localhost:9092");
+    let url = "http://tasks_service:50051";
+    let mut client = match TaskServiceClient::connect(url).await {
+        Ok(client) => client,
+        Err(_) => {
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
 
-    let producer : FutureProducer = config.create().expect("Couldn't create producer");
-
-    let record = FutureProducer::to("likes_topic").payload("qwe").key("Test-Key");
-
-    let status_delivery = producer.send(record, Timeout::After(Duration::from_secs(2))).await;
-
-    match status_delivery {
-        Ok(report) => println!("Message Send {:?}", report),
-        Err(e) => println!("Message Send {:?}", report),
+    let req = proto::SendLikeOrViewRequest {
+        author_id: input_payload.author_id,
+        task_id: input_payload.task_id,
+    };
+    let request = tonic::Request::new(req);
+    match client.send_like(request).await {
+        Ok(_) => {}
+        Err(_) => {
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
     };
 
     (StatusCode::OK).into_response()
 }
 
 async fn view(Json(input_payload): Json<LikeOrViewRequest1>) -> Response {
+    let url = "http://tasks_service:50051";
+    let mut client = match TaskServiceClient::connect(url).await {
+        Ok(client) => client,
+        Err(_) => {
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
+
+    let req = proto::SendLikeOrViewRequest {
+        author_id: input_payload.author_id,
+        task_id: input_payload.task_id,
+    };
+    let request = tonic::Request::new(req);
+    match client.send_view(request).await {
+        Ok(_) => {}
+        Err(_) => {
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
+
     (StatusCode::OK).into_response()
 }
