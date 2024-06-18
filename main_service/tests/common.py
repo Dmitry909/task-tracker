@@ -44,14 +44,14 @@ def update_task(task_id: int, new_text: str, token: str):
     return response
 
 
-def like(author_id: int, task_id: int, token: str):
-    json_data = {"author_id": author_id, "task_id": task_id}
+def like(task_id: int, token: str):
+    json_data = {"task_id": task_id}
     response = requests.post(f'{host}/like', headers={"Authorization": token}, json=json_data)
     return response
 
 
-def view(author_id: int, task_id: int, token: str):
-    json_data = {"author_id": author_id, "task_id": task_id}
+def view(task_id: int, token: str):
+    json_data = {"task_id": task_id}
     response = requests.post(f'{host}/view', headers={"Authorization": token}, json=json_data)
     return response
 

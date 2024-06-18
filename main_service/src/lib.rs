@@ -647,7 +647,8 @@ async fn like(headers: HeaderMap, Json(input_payload): Json<LikeOrViewRequest1>)
     let request = tonic::Request::new(req);
     match client.send_like(request).await {
         Ok(_) => {}
-        Err(_) => {
+        Err(e) => {
+            println!("{:?}", e);
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     };

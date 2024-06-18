@@ -76,11 +76,13 @@ def test_like_view():
     login_resp = login(username, password)
     token = login_resp.headers["Authorization"]
 
-    create_resp1 = create_task('Do please', token)
+    create_resp1 = create_task('task text', token)
     assert create_resp1.status_code == 201
     task_id1 = json.loads(create_resp1.text)["task_id"]
 
-    assert False
+    assert like(task_id1, token).status_code == 200
+    assert like(task_id1, token).status_code == 200
+    assert like(100500, token).status_code == 500 # TODO исправить на 404
 
 
 def test_stat():
@@ -92,4 +94,5 @@ def test_stat():
 
 test_signup_login_update()
 test_tasks()
+test_like_view()
 test_stat()

@@ -20,7 +20,6 @@ services:
     depends_on:
       - main_service_db
       - tasks_service
-      - kafka
 
   tasks_service_db:
     build: ./tasks_service_db/
@@ -46,6 +45,7 @@ services:
       - "50051:50051"
     depends_on:
       - tasks_service_db
+      - kafka
 
   zookeeper:
     image: confluentinc/cp-zookeeper:latest

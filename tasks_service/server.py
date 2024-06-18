@@ -3,10 +3,11 @@ from concurrent import futures
 import grpc
 import psycopg2
 from google.protobuf import empty_pb2
+from kafka import KafkaProducer
+import json
 
 import common_pb2
 import common_pb2_grpc
-
 
 class TaskService(common_pb2_grpc.TaskServiceServicer):
     def __init__(self):
@@ -18,12 +19,22 @@ class TaskService(common_pb2_grpc.TaskServiceServicer):
                                      password=os.getenv("DATABASE_PASSWORD"))
         self.cur = self.conn.cursor()
 
+        self.producer = KafkaProducer(
+            bootstrap_servers=['kafka:29092'],
+            api_version=(0, 11, 5),
+            value_serializer=lambda v: json.dumps(v).encode('utf-8'),
+            request_timeout_ms=3000
+        )
+
     def get_author_id_of_task(self, task_id):
-        self.cur.execute("SELECT author_id FROM tasks WHERE task_id = %s;", (task_id))
+        print('get_author_id_of_task called', file=sys.stderr)
+        self.cur.execute("SELECT author_id FROM tasks WHERE task_id = %s;", (task_id,))
+        print('execute called', file=sys.stderr)
         row = self.cur.fetchone()
+        print(f'type(row): {type(row)}', file=sys.stderr)
         if not row:
             return None
-        return row[0]
+        return row
 
     def CreateTask(self, request, context):
         if not request.author_id or not request.text:
@@ -86,17 +97,30 @@ class TaskService(common_pb2_grpc.TaskServiceServicer):
         return common_pb2.ListTasksResponse(tasks=tasks_list)
 
     def SendLike(self, request, context):
+        print('SendLike called', file=sys.stderr)
         author_id = self.get_author_id_of_task(request.task_id)
+        print(f'author_id: {author_id}', file=sys.stderr)
+        print(f'type(author_id): {type(author_id)}, author_id: {author_id}', file=sys.stderr)
         if not author_id:
             raise ValueError("No such task_id")
-        # TODO send to kafka here
+        send_result = self.producer.send('queue_likes', {
+            'task_id': request.task_id,
+            'author_id': author_id,
+            'liker_id': request.liker_id,
+        })
+        print(f'send_result: {send_result}', file=sys.stderr)
         return common_pb2.EmptyMessage()
 
     def SendView(self, request, context):
         author_id = self.get_author_id_of_task(request.task_id)
         if not author_id:
             raise ValueError("No such task_id")
-        # TODO send to kafka here
+        send_result = self.producer.send('queue_views', {
+            'task_id': request.task_id,
+            'author_id': author_id,
+            'liker_id': request.liker_id,
+        })
+        print(f'send_result: {send_result}', file=sys.stderr)
         return common_pb2.EmptyMessage()
 
 
