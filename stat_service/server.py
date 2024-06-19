@@ -7,30 +7,62 @@ import common_pb2
 import common_pb2_grpc
 import clickhouse_connect
 
+create_queries = ['''
+CREATE TABLE IF NOT EXISTS kafka_likes (
+    author_id Int64,
+    task_id Int64,
+    liker_id Int64
+) ENGINE = Kafka
+SETTINGS
+    kafka_broker_list = 'kafka:29092',
+    kafka_topic_list = 'queue_likes',
+    kafka_group_name = 'queue_likes_group',
+    kafka_format = 'JSONEachRow',
+    kafka_num_consumers = 1;
+''',
+'''
+CREATE TABLE IF NOT EXISTS likes (
+    author_id Int64,
+    task_id Int64,
+    liker_id Int64
+) ENGINE = MergeTree()
+ORDER BY task_id;
+''',
+'''
+CREATE MATERIALIZED VIEW IF NOT EXISTS kafka_to_likes_mv TO likes AS
+SELECT author_id, task_id, liker_id FROM kafka_likes;
+''',
+'''
+CREATE TABLE IF NOT EXISTS kafka_views (
+    author_id Int64,
+    task_id Int64,
+    viewer_id Int64
+) ENGINE = Kafka
+SETTINGS
+    kafka_broker_list = 'kafka:29092',
+    kafka_topic_list = 'queue_views',
+    kafka_group_name = 'queue_views_group',
+    kafka_format = 'JSONEachRow',
+    kafka_num_consumers = 1;
+''',
+'''
+CREATE TABLE IF NOT EXISTS views (
+    author_id Int64,
+    task_id Int64,
+    viewer_id Int64
+) ENGINE = MergeTree()
+ORDER BY task_id;
+''',
+'''
+CREATE MATERIALIZED VIEW IF NOT EXISTS kafka_to_views_mv TO views AS
+SELECT author_id, task_id, viewer_id FROM kafka_views;
+''']
+
 class StatService(common_pb2_grpc.StatServiceServicer):
     def __init__(self):
         self.client = clickhouse_connect.get_client(host='clickhouse')
-        print('self.client created', file=sys.stderr)
-        result = self.client.command('SELECT 1')
-        print(f'SELECT result: {result}', file=sys.stderr)
-        self.client.command('''CREATE TABLE likes
-            (
-                author_id Int64,
-                task_id Int64,
-                liker_id Int64
-            ) ENGINE = ReplacingMergeTree()
-            ORDER BY (author_id, task_id, liker_id);''')
-        print(f'CREATE TABLE likes finished', file=sys.stderr)
-        self.client.command('INSERT INTO likes VALUES (1, 2, 4)')
-        print(f'INSERT finished', file=sys.stderr)
-        self.client.command('''CREATE TABLE views
-            (
-                author_id Int64,
-                task_id Int64,
-                viewer_id Int64
-            ) ENGINE = ReplacingMergeTree()
-            ORDER BY (author_id, task_id, viewer_id);''')
-        print(f'CREATE TABLE views finished', file=sys.stderr)
+        for query in create_queries:
+            self.client.command(query)
 
 
     def Healthcheck(self, request, context):

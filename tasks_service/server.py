@@ -34,7 +34,7 @@ class TaskService(common_pb2_grpc.TaskServiceServicer):
         print(f'type(row): {type(row)}', file=sys.stderr)
         if not row:
             return None
-        return row
+        return row[0]
 
     def CreateTask(self, request, context):
         if not request.author_id or not request.text:
