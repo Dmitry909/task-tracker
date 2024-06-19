@@ -1,0 +1,62 @@
+###
+POST http://127.0.0.1:4000/signup
+Content-Type: application/json
+
+{
+    "username": "alex1",
+    "password": "alex1990*A"
+}
+
+###
+POST http://127.0.0.1:4000/login
+Content-Type: application/json
+
+{
+    "username": "alex1",
+    "password": "alex1990*A"
+}
+
+###
+POST http://127.0.0.1:4000/create_task
+Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6NywidXNlcm5hbWUiOiJhbGV4MSIsImV4cCI6MTcxODkwMDkxNn0.4vcfFNtRa_G5r-a08SRADeM8o07rvNKpC9Y-SlzpSIw
+Content-Type: application/json
+
+{
+    "text": "Task text"
+}
+
+###
+POST http://127.0.0.1:4000/signup
+Content-Type: application/json
+
+{
+    "username": "bob",
+    "password": "bobb1990*A"
+}
+
+###
+POST http://127.0.0.1:4000/login
+Content-Type: application/json
+
+{
+    "username": "bob",
+    "password": "bobb1990*A"
+}
+
+###
+POST http://127.0.0.1:4000/like
+Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6OCwidXNlcm5hbWUiOiJib2IiLCJleHAiOjE3MTg5MDExMTN9.x9YfwC9E5-BeQ5lqbibX3bJJFxVq25dJ26A1F9XMGUs
+Content-Type: application/json
+
+{
+    "task_id": 20
+}
+
+###
+POST http://127.0.0.1:4000/view
+Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6OCwidXNlcm5hbWUiOiJib2IiLCJleHAiOjE3MTg5MDExMTN9.x9YfwC9E5-BeQ5lqbibX3bJJFxVq25dJ26A1F9XMGUs
+Content-Type: application/json
+
+{
+    "task_id": 20
+}

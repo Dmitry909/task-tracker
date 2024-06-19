@@ -12,12 +12,12 @@ def do_everything_test():
     text1 = random_str(10)
     
     task_id1 = create_task(author_id, text1).task_id
-    task1 = get_task(author_id, task_id1)
+    task1 = get_task(task_id1)
     assert task1.task_id == task_id1 and task1.author_id == author_id and task1.text == text1
 
     text2 = random_str(10)
     update_task(author_id, task_id1, text2)
-    task2 = get_task(author_id, task_id1)
+    task2 = get_task(task_id1)
     assert task2.task_id == task_id1 and task2.author_id == author_id and task2.text == text2
 
     text3 = random_str(10)

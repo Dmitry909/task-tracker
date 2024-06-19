@@ -9,6 +9,7 @@ use chrono::Local;
 use chrono::NaiveDate;
 use hex;
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
+use proto::{stat_service_client::StatServiceClient, HealthcheckRequest, HealthcheckResponse};
 use proto::{task_service_client::TaskServiceClient, CreateTaskResponse};
 use proto::{
     CreateTaskRequest, DeleteTaskRequest, GetTaskRequest, ListTasksRequest, UpdateTaskRequest,
@@ -18,9 +19,10 @@ use sha2::{Digest, Sha256};
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres, Row};
 use std::{borrow::Borrow, str, sync::Arc, thread, time::Duration};
 use tonic;
+use tracing_subscriber::field::RecordFields;
 
 pub mod proto {
-    tonic::include_proto!("tasks");
+    tonic::include_proto!("common");
 }
 
 pub async fn create_pool(database_url: &str) -> Pool<Postgres> {
@@ -93,6 +95,9 @@ pub async fn create_app(users_db_url: &str, need_to_clear: bool) -> Router {
         .route("/delete_task", delete(delete_task))
         .route("/get_task", get(get_task))
         .route("/list_tasks", get(list_tasks))
+        .route("/like", post(like))
+        .route("/view", post(view))
+        .route("/healthcheck_stat", get(healthcheck_stat))
         .with_state(shared_state)
 }
 
@@ -430,6 +435,7 @@ pub struct GetTaskResponse1 {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ListTasksRequest1 {
+    user_id: i64,
     offset: i64,
     limit: i64,
 }
@@ -448,7 +454,6 @@ async fn create_task(
         }
     };
 
-    println!("1");
     let url = "http://tasks_service:50051";
     let mut client = match TaskServiceClient::connect(url).await {
         Ok(client) => client,
@@ -456,21 +461,19 @@ async fn create_task(
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     };
-    println!("2");
     let req = proto::CreateTaskRequest {
         author_id: id_and_username.0,
         text: input_payload.text,
     };
-    println!("3");
     let request = tonic::Request::new(req);
     let response = match client.create_task(request).await {
         Ok(response) => response,
-        Err(_) => {
+        Err(e) => {
+            println!("Error creating task: {:?}", e);
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     };
 
-    println!("4");
     let resp = CreateTaskResponse1 {
         task_id: response.get_ref().task_id,
     };
@@ -528,7 +531,6 @@ async fn delete_task(
         }
     };
 
-    println!("!1");
     let url = "http://tasks_service:50051";
     let mut client = match TaskServiceClient::connect(url).await {
         Ok(client) => client,
@@ -541,28 +543,16 @@ async fn delete_task(
         task_id: input_payload.task_id,
     };
     let request = tonic::Request::new(req);
-    println!("!2");
     match client.delete_task(request).await {
         Ok(_) => {}
         Err(_) => {
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     };
-    println!("!3");
     (StatusCode::OK).into_response()
 }
 
-async fn get_task(headers: HeaderMap, Json(input_payload): Json<GetTaskRequest1>) -> Response {
-    let id_and_username = match check_authorization(headers).await {
-        CheckAuthorizationResult::IdAndUsername(username) => username,
-        CheckAuthorizationResult::NoToken => {
-            return (StatusCode::UNAUTHORIZED, "Token is missing").into_response();
-        }
-        CheckAuthorizationResult::Invalid => {
-            return (StatusCode::UNAUTHORIZED, "Invalid token").into_response();
-        }
-    };
-
+async fn get_task(Json(input_payload): Json<GetTaskRequest1>) -> Response {
     let url = "http://tasks_service:50051";
     let mut client = match TaskServiceClient::connect(url).await {
         Ok(client) => client,
@@ -571,7 +561,6 @@ async fn get_task(headers: HeaderMap, Json(input_payload): Json<GetTaskRequest1>
         }
     };
     let req = proto::GetTaskRequest {
-        user_id: id_and_username.0, // TODO add
         task_id: input_payload.task_id,
     };
     let request = tonic::Request::new(req);
@@ -590,18 +579,7 @@ async fn get_task(headers: HeaderMap, Json(input_payload): Json<GetTaskRequest1>
     (StatusCode::CREATED, Json(resp)).into_response()
 }
 
-async fn list_tasks(headers: HeaderMap, Json(input_payload): Json<ListTasksRequest1>) -> Response {
-    let id_and_username = match check_authorization(headers).await {
-        CheckAuthorizationResult::IdAndUsername(username) => username,
-        CheckAuthorizationResult::NoToken => {
-            return (StatusCode::UNAUTHORIZED, "Token is missing").into_response();
-        }
-        CheckAuthorizationResult::Invalid => {
-            return (StatusCode::UNAUTHORIZED, "Invalid token").into_response();
-        }
-    };
-
-    println!("!!1");
+async fn list_tasks(Json(input_payload): Json<ListTasksRequest1>) -> Response {
     let url = "http://tasks_service:50051";
     let mut client = match TaskServiceClient::connect(url).await {
         Ok(client) => client,
@@ -609,9 +587,8 @@ async fn list_tasks(headers: HeaderMap, Json(input_payload): Json<ListTasksReque
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     };
-    println!("!!2");
     let req = proto::ListTasksRequest {
-        user_id: id_and_username.0,
+        user_id: input_payload.user_id,
         offset: input_payload.offset,
         limit: input_payload.limit,
     };
@@ -623,7 +600,6 @@ async fn list_tasks(headers: HeaderMap, Json(input_payload): Json<ListTasksReque
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     };
-    println!("!!3");
 
     let tasks: Vec<GetTaskResponse1> = response
         .get_ref()
@@ -637,6 +613,103 @@ async fn list_tasks(headers: HeaderMap, Json(input_payload): Json<ListTasksReque
         })
         .collect();
 
-    println!("!!4");
     (StatusCode::OK, Json(tasks)).into_response()
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LikeOrViewRequest1 {
+    task_id: i64,
+}
+
+async fn like(headers: HeaderMap, Json(input_payload): Json<LikeOrViewRequest1>) -> Response {
+    let id_and_username = match check_authorization(headers).await {
+        CheckAuthorizationResult::IdAndUsername(username) => username,
+        CheckAuthorizationResult::NoToken => {
+            return (StatusCode::UNAUTHORIZED, "Token is missing").into_response();
+        }
+        CheckAuthorizationResult::Invalid => {
+            return (StatusCode::UNAUTHORIZED, "Invalid token").into_response();
+        }
+    };
+    
+    let url = "http://tasks_service:50051";
+    let mut client = match TaskServiceClient::connect(url).await {
+        Ok(client) => client,
+        Err(_) => {
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
+
+    let req = proto::SendLikeOrViewRequest {
+        task_id: input_payload.task_id,
+        liker_id: id_and_username.0,
+    };
+    let request = tonic::Request::new(req);
+    match client.send_like(request).await {
+        Ok(_) => {}
+        Err(e) => {
+            println!("{:?}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
+
+    (StatusCode::OK).into_response()
+}
+
+async fn view(headers: HeaderMap, Json(input_payload): Json<LikeOrViewRequest1>) -> Response {
+    let id_and_username = match check_authorization(headers).await {
+        CheckAuthorizationResult::IdAndUsername(username) => username,
+        CheckAuthorizationResult::NoToken => {
+            return (StatusCode::UNAUTHORIZED, "Token is missing").into_response();
+        }
+        CheckAuthorizationResult::Invalid => {
+            return (StatusCode::UNAUTHORIZED, "Invalid token").into_response();
+        }
+    };
+    
+    let url = "http://tasks_service:50051";
+    let mut client = match TaskServiceClient::connect(url).await {
+        Ok(client) => client,
+        Err(_) => {
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
+
+    let req = proto::SendLikeOrViewRequest {
+        task_id: input_payload.task_id,
+        liker_id: id_and_username.0,
+    };
+    let request = tonic::Request::new(req);
+    match client.send_view(request).await {
+        Ok(_) => {}
+        Err(_) => {
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
+
+    (StatusCode::OK).into_response()
+}
+
+async fn healthcheck_stat() -> Response {
+    let url = "http://stat_service:50052";
+    let mut client = match StatServiceClient::connect(url).await {
+        Ok(client) => client,
+        Err(_) => {
+            eprintln!("!!! Error creating client");
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
+    eprintln!("@@@ Client created");
+
+    let req = proto::HealthcheckRequest { a: 4 };
+    let request = tonic::Request::new(req);
+    match client.healthcheck(request).await {
+        Ok(_) => {}
+        Err(e) => {
+            eprintln!("!!! Error connecting by grpc: {:?}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
+
+    (StatusCode::OK).into_response()
 }

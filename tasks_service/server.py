@@ -3,12 +3,13 @@ from concurrent import futures
 import grpc
 import psycopg2
 from google.protobuf import empty_pb2
+from kafka import KafkaProducer
+import json
 
-import tasks_pb2
-import tasks_pb2_grpc
+import common_pb2
+import common_pb2_grpc
 
-
-class TaskService(tasks_pb2_grpc.TaskServiceServicer):
+class TaskService(common_pb2_grpc.TaskServiceServicer):
     def __init__(self):
         print('__init__ called', file=sys.stderr)
         self.conn = psycopg2.connect(host=os.getenv("DATABASE_HOST"),
@@ -18,6 +19,23 @@ class TaskService(tasks_pb2_grpc.TaskServiceServicer):
                                      password=os.getenv("DATABASE_PASSWORD"))
         self.cur = self.conn.cursor()
 
+        self.producer = KafkaProducer(
+            bootstrap_servers=['kafka:29092'],
+            api_version=(0, 11, 5),
+            value_serializer=lambda v: json.dumps(v).encode('utf-8'),
+            request_timeout_ms=3000
+        )
+
+    def get_author_id_of_task(self, task_id):
+        print('get_author_id_of_task called', file=sys.stderr)
+        self.cur.execute("SELECT author_id FROM tasks WHERE task_id = %s;", (task_id,))
+        print('execute called', file=sys.stderr)
+        row = self.cur.fetchone()
+        print(f'type(row): {type(row)}', file=sys.stderr)
+        if not row:
+            return None
+        return row[0]
+
     def CreateTask(self, request, context):
         if not request.author_id or not request.text:
             raise ValueError("author_id or text is missing or empty")
@@ -25,7 +43,7 @@ class TaskService(tasks_pb2_grpc.TaskServiceServicer):
                          (request.author_id, request.text))
         task_id = self.cur.fetchone()[0]
         self.conn.commit()
-        return tasks_pb2.CreateTaskResponse(task_id=task_id)
+        return common_pb2.CreateTaskResponse(task_id=task_id)
 
     def UpdateTask(self, request, context):
         if not request.user_id or not request.task_id or not request.new_text:
@@ -45,8 +63,7 @@ class TaskService(tasks_pb2_grpc.TaskServiceServicer):
     def DeleteTask(self, request, context):
         if not request.user_id or not request.task_id:
             raise ValueError("user_id or task_id is missing or empty")
-        self.cur.execute(
-            "SELECT author_id FROM tasks WHERE task_id = %s;", (request.task_id,))
+        self.cur.execute("SELECT author_id FROM tasks WHERE task_id = %s;", (request.task_id,))
         task = self.cur.fetchone()
         if not task or task[0] != request.user_id:
             context.abort(grpc.StatusCode.PERMISSION_DENIED,
@@ -58,16 +75,14 @@ class TaskService(tasks_pb2_grpc.TaskServiceServicer):
         return empty_pb2.Empty()
 
     def GetTask(self, request, context):
-        if not request.user_id or not request.task_id:
+        if not request.task_id:
             raise ValueError("user_id or task_id is missing or empty")
-        self.cur.execute(
-            "SELECT task_id, author_id, text FROM tasks WHERE task_id = %s;", (request.task_id,))
+        self.cur.execute("SELECT task_id, author_id, text FROM tasks WHERE task_id = %s;", (request.task_id,))
         task = self.cur.fetchone()
-        if not task or task[1] != request.user_id:
-            context.abort(grpc.StatusCode.PERMISSION_DENIED,
-                          "Permission Denied")
+        if not task:
+            context.abort(grpc.StatusCode.NOT_FOUND, "Task doesn't exist")
 
-        return tasks_pb2.GetTaskResponse(task_id=task[0], author_id=task[1], text=task[2])
+        return common_pb2.GetTaskResponse(task_id=task[0], author_id=task[1], text=task[2])
 
     def ListTasks(self, request, context):
         # if not request.user_id or not request.offset or not request.limit:
@@ -77,15 +92,41 @@ class TaskService(tasks_pb2_grpc.TaskServiceServicer):
                          (request.user_id, request.limit, request.offset))
 
         tasks_rows = self.cur.fetchall()
-        tasks_list = [tasks_pb2.Task(
-            task_id=row[0], author_id=row[1], text=row[2]) for row in tasks_rows]
+        tasks_list = [common_pb2.Task(task_id=row[0], author_id=row[1], text=row[2]) for row in tasks_rows]
 
-        return tasks_pb2.ListTasksResponse(tasks=tasks_list)
+        return common_pb2.ListTasksResponse(tasks=tasks_list)
+
+    def SendLike(self, request, context):
+        print('SendLike called', file=sys.stderr)
+        author_id = self.get_author_id_of_task(request.task_id)
+        print(f'author_id: {author_id}', file=sys.stderr)
+        print(f'type(author_id): {type(author_id)}, author_id: {author_id}', file=sys.stderr)
+        if not author_id:
+            raise ValueError("No such task_id")
+        send_result = self.producer.send('queue_likes', {
+            'task_id': request.task_id,
+            'author_id': author_id,
+            'liker_id': request.liker_id,
+        })
+        print(f'send_result: {send_result}', file=sys.stderr)
+        return common_pb2.EmptyMessage()
+
+    def SendView(self, request, context):
+        author_id = self.get_author_id_of_task(request.task_id)
+        if not author_id:
+            raise ValueError("No such task_id")
+        send_result = self.producer.send('queue_views', {
+            'task_id': request.task_id,
+            'author_id': author_id,
+            'liker_id': request.liker_id,
+        })
+        print(f'send_result: {send_result}', file=sys.stderr)
+        return common_pb2.EmptyMessage()
 
 
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    tasks_pb2_grpc.add_TaskServiceServicer_to_server(TaskService(), server)
+    common_pb2_grpc.add_TaskServiceServicer_to_server(TaskService(), server)
     server.add_insecure_port('[::]:50051')
     server.start()
     server.wait_for_termination()
