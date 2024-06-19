@@ -88,3 +88,54 @@ paths:
           description: Unauthorized request
         404:
           description: User not found
+  /like:
+    post:
+      summary: Send like
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                task_id:
+                  type: int
+      responses:
+        200:
+          description: Like sent
+        404:
+          description: Task not found
+  /view:
+    post:
+      summary: Send view
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                task_id:
+                  type: int
+      responses:
+        200:
+          description: View sent
+        404:
+          description: Task not found
+  /healthcheck_stat:
+    get:
+      summary: Check is stat service up or down
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                task_id:
+                  type: int
+      responses:
+        200:
+          description: Default response
+        500:
+          description: Stat service is down
