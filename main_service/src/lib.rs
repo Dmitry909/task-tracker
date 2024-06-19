@@ -98,6 +98,9 @@ pub async fn create_app(users_db_url: &str, need_to_clear: bool) -> Router {
         .route("/like", post(like))
         .route("/view", post(view))
         .route("/healthcheck_stat", get(healthcheck_stat))
+        .route("/likes_and_views", get(likes_and_views))
+        .route("/most_popular_tasks", get(most_popular_tasks))
+        .route("/most_popular_users", get(most_popular_users))
         .with_state(shared_state)
 }
 
@@ -631,7 +634,7 @@ async fn like(headers: HeaderMap, Json(input_payload): Json<LikeOrViewRequest1>)
             return (StatusCode::UNAUTHORIZED, "Invalid token").into_response();
         }
     };
-    
+
     let url = "http://tasks_service:50051";
     let mut client = match TaskServiceClient::connect(url).await {
         Ok(client) => client,
@@ -666,7 +669,7 @@ async fn view(headers: HeaderMap, Json(input_payload): Json<LikeOrViewRequest1>)
             return (StatusCode::UNAUTHORIZED, "Invalid token").into_response();
         }
     };
-    
+
     let url = "http://tasks_service:50051";
     let mut client = match TaskServiceClient::connect(url).await {
         Ok(client) => client,
@@ -712,4 +715,82 @@ async fn healthcheck_stat() -> Response {
     };
 
     (StatusCode::OK).into_response()
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LikesAndViewsRequest1 {
+    task_id: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LikesAndViewsResponse1 {
+    task_id: i64,
+    likes_count: i64,
+    views_count: i64,
+}
+
+async fn likes_and_views(Json(input_payload): Json<LikesAndViewsRequest1>) -> Response {
+    // TODO grpc call
+
+    let resp = LikesAndViewsResponse1 {
+        task_id: 1,
+        likes_count: 2,
+        views_count: 3,
+    };
+    (StatusCode::OK, Json(resp)).into_response()
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Top5TasksRequest1 {
+    sort_by_likes: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Top5TasksResponse1 {
+    task_id: i64,
+    author_username: String,
+    likes_count: i64,
+    views_count: i64,
+}
+
+async fn most_popular_tasks(Json(input_payload): Json<Top5TasksRequest1>) -> Response {
+    // TODO grpc call
+
+    let resp: Vec<Top5TasksResponse1> = vec![
+        Top5TasksResponse1 {
+            task_id: 1,
+            author_username: "Denis S.".to_string(),
+            likes_count: 3,
+            views_count: 4,
+        },
+        Top5TasksResponse1 {
+            task_id: 5,
+            author_username: "D. Sin".to_string(),
+            likes_count: 7,
+            views_count: 8,
+        },
+    ];
+    (StatusCode::OK, Json(resp)).into_response()
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Top3UsersResponse1 {
+    author_username: String,
+    likes_count: i64,
+}
+
+async fn most_popular_users() -> Response {
+    // TODO grpc call
+
+    let resp: Vec<Top3UsersResponse1> = vec![
+        Top3UsersResponse1 {
+            author_username: "Denis S.".to_string(),
+            likes_count: 999999999,
+        },
+        Top3UsersResponse1 {
+            author_username: "Roman L.".to_string(),
+            likes_count: 999999999,
+        },
+    ];
+    (StatusCode::OK, Json(resp)).into_response()    
 }
