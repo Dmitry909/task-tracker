@@ -98,7 +98,7 @@ message GetTop5PostsRequest {
 
 message GetTop5PostsResponseOne {
     int64 task_id = 1;
-    string author_id = 2;
+    int64 author_id = 2;
     int64 likes_count = 3;
     int64 views_count = 4;
 }
