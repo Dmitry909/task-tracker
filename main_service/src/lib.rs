@@ -1,9 +1,5 @@
 use axum::{
-    extract::State,
-    http::{request, response, HeaderMap, StatusCode},
-    response::{IntoResponse, Response},
-    routing::{delete, get, post, put},
-    Json, Router,
+    extract::State, http::{request, response, HeaderMap, StatusCode}, response::{IntoResponse, Response}, routing::{delete, get, post, put}, Error, Json, Router
 };
 use chrono::Local;
 use chrono::NaiveDate;
@@ -753,23 +749,46 @@ pub struct Top5TasksResponse1 {
     views_count: i64,
 }
 
-async fn most_popular_tasks(Json(input_payload): Json<Top5TasksRequest1>) -> Response {
-    // TODO grpc call
+async fn get_username_by_id(user_id: i64) -> Option<String> {
+    // TODO
+    Some("Vasya".to_string())
+}
 
-    let resp: Vec<Top5TasksResponse1> = vec![
-        Top5TasksResponse1 {
-            task_id: 1,
-            author_username: "Denis S.".to_string(),
-            likes_count: 3,
-            views_count: 4,
-        },
-        Top5TasksResponse1 {
-            task_id: 5,
-            author_username: "D. Sin".to_string(),
-            likes_count: 7,
-            views_count: 8,
-        },
-    ];
+async fn most_popular_tasks(Json(input_payload): Json<Top5TasksRequest1>) -> Response {
+    let url = "http://stat_service:50052";
+    let mut client = match TaskServiceClient::connect(url).await {
+        Ok(client) => client,
+        Err(_) => {
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
+    let req = proto::GetTop5PostsRequest {
+        sort_by_likes: input_payload.sort_by_likes,
+    };
+    let request = tonic::Request::new(req);
+    let response = match client.get_top5_posts(request).await {
+        Ok(response) => response,
+        Err(e) => {
+            println!("{}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
+    let tasks: Vec<Top5TasksResponse1> = vec!();
+    for record in response.get_ref().clone().posts.iter() {
+        let username = match get_username_by_id(record.author_id).await {
+            Some(username) => username,
+            None => {
+                return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+            }
+        };
+        tasks.push(Top5TasksResponse1 {
+            task_id: record.task_id,
+            author_username: username,
+            likes_count: record.likes_count,
+            views_count: record.views_count,
+        });
+    }
+
     (StatusCode::OK, Json(resp)).into_response()
 }
 
