@@ -132,7 +132,6 @@ def test_aggregate():
     assert likes_and_views_dict["views_count"] == 1
 
     most_popular_tasks_resp = most_popular_tasks(sort_by_likes=True)
-    print(most_popular_tasks_resp.status_code)
     assert most_popular_tasks_resp.status_code == 200
     most_popular_tasks_list = json.loads(most_popular_tasks_resp.text)
     assert 3 <= len(most_popular_tasks_list) <= 5
@@ -155,8 +154,35 @@ def test_aggregate():
     print('test_aggregate OK')
 
 
-# test_signup_login_update()
-# test_tasks()
-# test_like_view()
-# test_stat()
+def test_aggregate2():
+    client = clickhouse_connect.get_client(host='localhost')
+    client.command('TRUNCATE TABLE likes')
+
+    usernames = [random_str(10) for _ in range(5)]
+    password = 'aaaaaA1*'
+
+    tokens = []
+    for username in usernames:
+        signup(username, password)
+        tokens.append(login(username, password).headers["Authorization"])
+
+    for token in tokens:
+        task_id = json.loads(create_task('task text', token).text)["task_id"]
+        view(task_id=task_id, token=token)
+
+    time.sleep(3)
+
+    most_popular_tasks_resp = most_popular_tasks(sort_by_likes=False)
+    assert most_popular_tasks_resp.status_code == 200
+    most_popular_tasks_list = json.loads(most_popular_tasks_resp.text)
+    assert len(most_popular_tasks_list) == 5
+
+    print('test_aggregate2 OK')
+
+
+test_signup_login_update()
+test_tasks()
+test_like_view()
+test_stat()
 test_aggregate()
+test_aggregate2()
