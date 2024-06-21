@@ -122,26 +122,26 @@ def test_aggregate():
     for token in tokens[:3]:
         like(task_id2_2, token)
 
-    time.sleep(2)
+    time.sleep(3)
 
     likes_and_views_resp = likes_and_views(task_id1_1)
-    print(likes_and_views_resp.status_code)
     assert likes_and_views_resp.status_code == 200
     likes_and_views_dict = json.loads(likes_and_views_resp.text)
     assert likes_and_views_dict["task_id"] == task_id1_1
     assert likes_and_views_dict["likes_count"] == 5
     assert likes_and_views_dict["views_count"] == 1
 
-    # most_popular_tasks_resp = most_popular_tasks(sort_by_likes=True)
-    # assert most_popular_tasks_resp.status_code == 200
-    # most_popular_tasks_list = json.loads(most_popular_tasks_resp.text)
-    # assert 3 <= len(most_popular_tasks_list) <= 5
-    # assert most_popular_tasks_list[0]["task_id"] == task_id1_1
-    # assert most_popular_tasks_list[1]["task_id"] == task_id2_1
-    # assert most_popular_tasks_list[2]["task_id"] == task_id2_2
-    # assert most_popular_tasks_list[0]["likes_count"] == 5
-    # assert most_popular_tasks_list[1]["likes_count"] == 4
-    # assert most_popular_tasks_list[2]["likes_count"] == 3
+    most_popular_tasks_resp = most_popular_tasks(sort_by_likes=True)
+    print(most_popular_tasks_resp.status_code)
+    assert most_popular_tasks_resp.status_code == 200
+    most_popular_tasks_list = json.loads(most_popular_tasks_resp.text)
+    assert 3 <= len(most_popular_tasks_list) <= 5
+    assert most_popular_tasks_list[0]["task_id"] == task_id1_1
+    assert most_popular_tasks_list[1]["task_id"] == task_id2_1
+    assert most_popular_tasks_list[2]["task_id"] == task_id2_2
+    assert most_popular_tasks_list[0]["likes_count"] == 5
+    assert most_popular_tasks_list[1]["likes_count"] == 4
+    assert most_popular_tasks_list[2]["likes_count"] == 3
 
     most_popular_users_resp = most_popular_users()
     assert most_popular_users_resp.status_code == 200

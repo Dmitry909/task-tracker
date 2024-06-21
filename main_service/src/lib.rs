@@ -776,6 +776,7 @@ pub struct Top5TasksResponse1 {
 }
 
 async fn get_username_by_id(state: &Arc<AppState>, user_id: i64) -> Option<String> {
+    eprintln!("SELECT * FROM users WHERE id='{}'", user_id);
     let query_result = sqlx::query(&format!("SELECT * FROM users WHERE id='{}'", user_id,))
         .fetch_optional(&state.pool)
         .await;
@@ -783,12 +784,19 @@ async fn get_username_by_id(state: &Arc<AppState>, user_id: i64) -> Option<Strin
     match query_result {
         Ok(row_opt) => match row_opt {
             Some(row) => {
+                eprintln!("Got row PgRow");
                 let username: String = row.try_get("username").unwrap();
                 Some(username)
             }
-            None => None,
+            None => {
+                eprintln!("234");
+                None
+            },
         },
-        Err(_) => None,
+        Err(_) => {
+            eprintln!("345");
+            None
+        },
     }
 }
 
@@ -819,12 +827,14 @@ async fn most_popular_tasks(
     eprintln!("response got");
     let mut tasks: Vec<Top5TasksResponse1> = vec![];
     for record in response.get_ref().clone().posts.iter() {
-        let username = match get_username_by_id(&state, record.author_id).await {
-            Some(username) => username,
-            None => {
-                return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
-            }
-        };
+        // let username = match get_username_by_id(&state, record.author_id).await {
+        //     Some(username) => username,
+        //     None => {
+        //         eprintln!("Couldn't get username of {}", record.author_id);
+        //         return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        //     }
+        // };
+        let username = "not implemented".to_string();
         eprintln!("username got: {}", username);
         tasks.push(Top5TasksResponse1 {
             task_id: record.task_id,

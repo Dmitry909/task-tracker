@@ -100,17 +100,18 @@ class StatService(common_pb2_grpc.StatServiceServicer):
         query = ''
         if request.sort_by_likes:
             query = 'SELECT task_id, COUNT(DISTINCT liker_id) AS unique_likes FROM likes GROUP BY task_id ORDER BY unique_likes DESC LIMIT 5;'
-            resp = self.client.command(query)
-            print(resp, file=sys.stderr)
-            return common_pb2.GetTop5PostsResponse([
-                common_pb2.GetTop5PostsResponseOne(task_id=row[0], author_id='', likes_count=row[1], view_count=0) for row in resp
+        else:
+            query = 'SELECT task_id, COUNT(DISTINCT viewer_id) AS unique_views FROM views GROUP BY task_id ORDER BY unique_views DESC LIMIT 5;'
+
+        resp = parse(self.client.command(query))
+        print(resp, file=sys.stderr)
+        if request.sort_by_likes:
+            return common_pb2.GetTop5PostsResponse(posts=[
+                common_pb2.GetTop5PostsResponseOne(task_id=int(row[0]), author_id=0, likes_count=int(row[1]), views_count=0) for row in resp
             ])
 
-        query = 'SELECT task_id, COUNT(DISTINCT viewer_id) AS unique_views FROM views GROUP BY task_id ORDER BY unique_views DESC LIMIT 5;'
-        resp = self.client.command(query)
-        print(resp, file=sys.stderr)
         return common_pb2.GetTop5PostsResponse(posts=[
-            common_pb2.GetTop5PostsResponseOne(task_id=int(row[0]), author_id=0, likes_count=0, view_count=int(row[0])) for row in resp
+            common_pb2.GetTop5PostsResponseOne(task_id=int(row[0]), author_id=0, likes_count=0, views_count=int(row[0])) for row in resp
         ])
 
     def GetTop3Users(self, request, context):
