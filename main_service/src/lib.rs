@@ -726,13 +726,35 @@ pub struct LikesAndViewsResponse1 {
 }
 
 async fn likes_and_views(Json(input_payload): Json<LikesAndViewsRequest1>) -> Response {
-    // TODO grpc call
+    let url = "http://stat_service:50052";
+    let mut client = match StatServiceClient::connect(url).await {
+        Ok(client) => client,
+        Err(_) => {
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
+    eprintln!("Client created");
+    let req = proto::GetLikesAndViewsRequest {
+        task_id: input_payload.task_id,
+    };
+    eprintln!("req created");
+    let request = tonic::Request::new(req);
+    eprintln!("request created");
+    let response = match client.get_likes_and_views(request).await {
+        Ok(response) => response,
+        Err(e) => {
+            eprintln!("{}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
+    eprintln!("response got");
 
     let resp = LikesAndViewsResponse1 {
-        task_id: 1,
-        likes_count: 2,
-        views_count: 3,
+        task_id: response.get_ref().task_id,
+        likes_count: response.get_ref().likes_count,
+        views_count: response.get_ref().views_count,
     };
+
     (StatusCode::OK, Json(resp)).into_response()
 }
 
@@ -756,7 +778,7 @@ async fn get_username_by_id(user_id: i64) -> Option<String> {
 
 async fn most_popular_tasks(Json(input_payload): Json<Top5TasksRequest1>) -> Response {
     let url = "http://stat_service:50052";
-    let mut client = match TaskServiceClient::connect(url).await {
+    let mut client = match StatServiceClient::connect(url).await {
         Ok(client) => client,
         Err(_) => {
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
@@ -773,7 +795,7 @@ async fn most_popular_tasks(Json(input_payload): Json<Top5TasksRequest1>) -> Res
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     };
-    let tasks: Vec<Top5TasksResponse1> = vec!();
+    let mut tasks: Vec<Top5TasksResponse1> = vec!();
     for record in response.get_ref().clone().posts.iter() {
         let username = match get_username_by_id(record.author_id).await {
             Some(username) => username,
@@ -789,7 +811,7 @@ async fn most_popular_tasks(Json(input_payload): Json<Top5TasksRequest1>) -> Res
         });
     }
 
-    (StatusCode::OK, Json(resp)).into_response()
+    (StatusCode::OK, Json(tasks)).into_response()
 }
 
 #[derive(Debug, Serialize, Deserialize)]
