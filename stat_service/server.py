@@ -59,6 +59,8 @@ SELECT author_id, task_id, viewer_id FROM kafka_views;
 ''']
 
 def parse(li):
+    if not isinstance(li, list):
+        return []
     res = []
     curr = []
     for q in li:
