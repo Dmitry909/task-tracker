@@ -1,5 +1,9 @@
 use axum::{
-    extract::State, http::{request, response, HeaderMap, StatusCode}, response::{IntoResponse, Response}, routing::{delete, get, post, put}, Error, Json, Router
+    extract::State,
+    http::{request, response, HeaderMap, StatusCode},
+    response::{IntoResponse, Response},
+    routing::{delete, get, post, put},
+    Error, Json, Router,
 };
 use chrono::Local;
 use chrono::NaiveDate;
@@ -771,12 +775,27 @@ pub struct Top5TasksResponse1 {
     views_count: i64,
 }
 
-async fn get_username_by_id(user_id: i64) -> Option<String> {
-    // TODO
-    Some("Vasya".to_string())
+async fn get_username_by_id(state: &Arc<AppState>, user_id: i64) -> Option<String> {
+    let query_result = sqlx::query(&format!("SELECT * FROM users WHERE id='{}'", user_id,))
+        .fetch_optional(&state.pool)
+        .await;
+
+    match query_result {
+        Ok(row_opt) => match row_opt {
+            Some(row) => {
+                let username: String = row.try_get("username").unwrap();
+                Some(username)
+            }
+            None => None,
+        },
+        Err(_) => None,
+    }
 }
 
-async fn most_popular_tasks(Json(input_payload): Json<Top5TasksRequest1>) -> Response {
+async fn most_popular_tasks(
+    State(state): State<Arc<AppState>>,
+    Json(input_payload): Json<Top5TasksRequest1>,
+) -> Response {
     let url = "http://stat_service:50052";
     let mut client = match StatServiceClient::connect(url).await {
         Ok(client) => client,
@@ -787,7 +806,9 @@ async fn most_popular_tasks(Json(input_payload): Json<Top5TasksRequest1>) -> Res
     let req = proto::GetTop5PostsRequest {
         sort_by_likes: input_payload.sort_by_likes,
     };
+    eprintln!("req created");
     let request = tonic::Request::new(req);
+    eprintln!("request created");
     let response = match client.get_top5_posts(request).await {
         Ok(response) => response,
         Err(e) => {
@@ -795,14 +816,16 @@ async fn most_popular_tasks(Json(input_payload): Json<Top5TasksRequest1>) -> Res
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     };
-    let mut tasks: Vec<Top5TasksResponse1> = vec!();
+    eprintln!("response got");
+    let mut tasks: Vec<Top5TasksResponse1> = vec![];
     for record in response.get_ref().clone().posts.iter() {
-        let username = match get_username_by_id(record.author_id).await {
+        let username = match get_username_by_id(&state, record.author_id).await {
             Some(username) => username,
             None => {
                 return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
             }
         };
+        eprintln!("username got: {}", username);
         tasks.push(Top5TasksResponse1 {
             task_id: record.task_id,
             author_username: username,
@@ -820,18 +843,40 @@ pub struct Top3UsersResponse1 {
     likes_count: i64,
 }
 
-async fn most_popular_users() -> Response {
-    // TODO grpc call
+async fn most_popular_users(State(state): State<Arc<AppState>>) -> Response {
+    let url = "http://stat_service:50052";
+    let mut client = match StatServiceClient::connect(url).await {
+        Ok(client) => client,
+        Err(_) => {
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
+    let req = proto::EmptyMessage {};
+    eprintln!("req created");
+    let request = tonic::Request::new(req);
+    eprintln!("request created");
+    let response = match client.get_top3_users(request).await {
+        Ok(response) => response,
+        Err(e) => {
+            println!("{}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
+    eprintln!("response got");
 
-    let resp: Vec<Top3UsersResponse1> = vec![
-        Top3UsersResponse1 {
-            author_username: "Denis S.".to_string(),
-            likes_count: 999999999,
-        },
-        Top3UsersResponse1 {
-            author_username: "Roman L.".to_string(),
-            likes_count: 999999999,
-        },
-    ];
-    (StatusCode::OK, Json(resp)).into_response()    
+    let mut tasks: Vec<Top3UsersResponse1> = vec![];
+    for record in response.get_ref().clone().users.iter() {
+        let username = match get_username_by_id(&state, record.author_id).await {
+            Some(username) => username,
+            None => {
+                return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+            }
+        };
+        eprintln!("username got: {}", username);
+        tasks.push(Top3UsersResponse1 {
+            author_username: username,
+            likes_count: record.likes_count,
+        });
+    }
+    (StatusCode::OK, Json(tasks)).into_response()
 }

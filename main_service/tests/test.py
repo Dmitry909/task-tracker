@@ -3,6 +3,7 @@ import random
 from string import ascii_lowercase, digits, ascii_uppercase
 import json
 import time
+import clickhouse_connect
 
 def random_str(length):
     return ''.join(random.choice(ascii_lowercase + digits) for _ in range(length))
@@ -95,6 +96,9 @@ def test_stat():
 
 
 def test_aggregate():
+    client = clickhouse_connect.get_client(host='localhost')
+    client.command('TRUNCATE TABLE likes')
+
     usernames = [random_str(10) for _ in range(5)]
     password = 'aaaaaA1*'
 
@@ -118,9 +122,10 @@ def test_aggregate():
     for token in tokens[:3]:
         like(task_id2_2, token)
 
-    time.sleep(1)
+    time.sleep(2)
 
     likes_and_views_resp = likes_and_views(task_id1_1)
+    print(likes_and_views_resp.status_code)
     assert likes_and_views_resp.status_code == 200
     likes_and_views_dict = json.loads(likes_and_views_resp.text)
     assert likes_and_views_dict["task_id"] == task_id1_1
@@ -138,16 +143,16 @@ def test_aggregate():
     # assert most_popular_tasks_list[1]["likes_count"] == 4
     # assert most_popular_tasks_list[2]["likes_count"] == 3
 
-    # most_popular_users_resp = most_popular_users()
-    # assert most_popular_users_resp.status_code == 200
-    # most_popular_users_list = json.loads(most_popular_users_resp.text)
-    # assert 2 <= len(most_popular_users_list) <= 3
-    # assert most_popular_users_list[0]["author_username"] == usernames[1]
-    # assert most_popular_users_list[1]["author_username"] == usernames[0]
-    # assert most_popular_users_list[0]["likes_count"] == 7
-    # assert most_popular_users_list[1]["likes_count"] == 5
+    most_popular_users_resp = most_popular_users()
+    assert most_popular_users_resp.status_code == 200
+    most_popular_users_list = json.loads(most_popular_users_resp.text)
+    assert 2 <= len(most_popular_users_list) <= 3
+    assert most_popular_users_list[0]["author_username"] == usernames[1]
+    assert most_popular_users_list[1]["author_username"] == usernames[0]
+    assert most_popular_users_list[0]["likes_count"] == 7
+    assert most_popular_users_list[1]["likes_count"] == 5
 
-    # print('test_aggregate OK')
+    print('test_aggregate OK')
 
 
 # test_signup_login_update()
