@@ -11,13 +11,13 @@ service TaskService {
 
     rpc SendLike (SendLikeOrViewRequest) returns (EmptyMessage);
     rpc SendView (SendLikeOrViewRequest) returns (EmptyMessage);
-    rpc GetLikesAndViews (GetLikesAndViewsRequest) returns (GetLikesAndViewsResponse);
-    rpc GetTop5Posts (GetTop5PostsRequest) returns (GetTop5PostsResponse);
-    rpc GetTop3Users (EmptyMessage) returns (GetTop3UsersResponse);
 }
 
 service StatService {
     rpc Healthcheck (HealthcheckRequest) returns (HealthcheckResponse);
+    rpc GetLikesAndViews (GetLikesAndViewsRequest) returns (GetLikesAndViewsResponse);
+    rpc GetTop5Posts (GetTop5PostsRequest) returns (GetTop5PostsResponse);
+    rpc GetTop3Users (EmptyMessage) returns (GetTop3UsersResponse);
 }
 
 message EmptyMessage {
