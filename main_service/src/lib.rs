@@ -3,7 +3,7 @@ use axum::{
     http::{request, response, HeaderMap, StatusCode},
     response::{IntoResponse, Response},
     routing::{delete, get, post, put},
-    Json, Router,
+    Error, Json, Router,
 };
 use chrono::Local;
 use chrono::NaiveDate;
@@ -98,6 +98,9 @@ pub async fn create_app(users_db_url: &str, need_to_clear: bool) -> Router {
         .route("/like", post(like))
         .route("/view", post(view))
         .route("/healthcheck_stat", get(healthcheck_stat))
+        .route("/likes_and_views", get(likes_and_views))
+        .route("/most_popular_tasks", get(most_popular_tasks))
+        .route("/most_popular_users", get(most_popular_users))
         .with_state(shared_state)
 }
 
@@ -631,7 +634,7 @@ async fn like(headers: HeaderMap, Json(input_payload): Json<LikeOrViewRequest1>)
             return (StatusCode::UNAUTHORIZED, "Invalid token").into_response();
         }
     };
-    
+
     let url = "http://tasks_service:50051";
     let mut client = match TaskServiceClient::connect(url).await {
         Ok(client) => client,
@@ -666,7 +669,7 @@ async fn view(headers: HeaderMap, Json(input_payload): Json<LikeOrViewRequest1>)
             return (StatusCode::UNAUTHORIZED, "Invalid token").into_response();
         }
     };
-    
+
     let url = "http://tasks_service:50051";
     let mut client = match TaskServiceClient::connect(url).await {
         Ok(client) => client,
@@ -712,4 +715,178 @@ async fn healthcheck_stat() -> Response {
     };
 
     (StatusCode::OK).into_response()
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LikesAndViewsRequest1 {
+    task_id: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LikesAndViewsResponse1 {
+    task_id: i64,
+    likes_count: i64,
+    views_count: i64,
+}
+
+async fn likes_and_views(Json(input_payload): Json<LikesAndViewsRequest1>) -> Response {
+    let url = "http://stat_service:50052";
+    let mut client = match StatServiceClient::connect(url).await {
+        Ok(client) => client,
+        Err(_) => {
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
+    eprintln!("Client created");
+    let req = proto::GetLikesAndViewsRequest {
+        task_id: input_payload.task_id,
+    };
+    eprintln!("req created");
+    let request = tonic::Request::new(req);
+    eprintln!("request created");
+    let response = match client.get_likes_and_views(request).await {
+        Ok(response) => response,
+        Err(e) => {
+            eprintln!("{}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
+    eprintln!("response got");
+
+    let resp = LikesAndViewsResponse1 {
+        task_id: response.get_ref().task_id,
+        likes_count: response.get_ref().likes_count,
+        views_count: response.get_ref().views_count,
+    };
+
+    (StatusCode::OK, Json(resp)).into_response()
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Top5TasksRequest1 {
+    sort_by_likes: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Top5TasksResponse1 {
+    task_id: i64,
+    author_username: String,
+    likes_count: i64,
+    views_count: i64,
+}
+
+async fn get_username_by_id(state: &Arc<AppState>, user_id: i64) -> Option<String> {
+    eprintln!("SELECT * FROM users WHERE id='{}'", user_id);
+    let query_result = sqlx::query(&format!("SELECT * FROM users WHERE id='{}'", user_id,))
+        .fetch_optional(&state.pool)
+        .await;
+
+    match query_result {
+        Ok(row_opt) => match row_opt {
+            Some(row) => {
+                eprintln!("Got row PgRow");
+                let username: String = row.try_get("username").unwrap();
+                Some(username)
+            }
+            None => {
+                eprintln!("234");
+                None
+            },
+        },
+        Err(_) => {
+            eprintln!("345");
+            None
+        },
+    }
+}
+
+async fn most_popular_tasks(
+    State(state): State<Arc<AppState>>,
+    Json(input_payload): Json<Top5TasksRequest1>,
+) -> Response {
+    let url = "http://stat_service:50052";
+    let mut client = match StatServiceClient::connect(url).await {
+        Ok(client) => client,
+        Err(_) => {
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
+    let req = proto::GetTop5PostsRequest {
+        sort_by_likes: input_payload.sort_by_likes,
+    };
+    eprintln!("req created");
+    let request = tonic::Request::new(req);
+    eprintln!("request created");
+    let response = match client.get_top5_posts(request).await {
+        Ok(response) => response,
+        Err(e) => {
+            println!("{}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
+    eprintln!("response got");
+    let mut tasks: Vec<Top5TasksResponse1> = vec![];
+    for record in response.get_ref().clone().posts.iter() {
+        // let username = match get_username_by_id(&state, record.author_id).await {
+        //     Some(username) => username,
+        //     None => {
+        //         eprintln!("Couldn't get username of {}", record.author_id);
+        //         return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        //     }
+        // };
+        let username = "not implemented".to_string();
+        eprintln!("username got: {}", username);
+        tasks.push(Top5TasksResponse1 {
+            task_id: record.task_id,
+            author_username: username,
+            likes_count: record.likes_count,
+            views_count: record.views_count,
+        });
+    }
+
+    (StatusCode::OK, Json(tasks)).into_response()
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Top3UsersResponse1 {
+    author_username: String,
+    likes_count: i64,
+}
+
+async fn most_popular_users(State(state): State<Arc<AppState>>) -> Response {
+    let url = "http://stat_service:50052";
+    let mut client = match StatServiceClient::connect(url).await {
+        Ok(client) => client,
+        Err(_) => {
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
+    let req = proto::EmptyMessage {};
+    eprintln!("req created");
+    let request = tonic::Request::new(req);
+    eprintln!("request created");
+    let response = match client.get_top3_users(request).await {
+        Ok(response) => response,
+        Err(e) => {
+            println!("{}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
+    eprintln!("response got");
+
+    let mut tasks: Vec<Top3UsersResponse1> = vec![];
+    for record in response.get_ref().clone().users.iter() {
+        let username = match get_username_by_id(&state, record.author_id).await {
+            Some(username) => username,
+            None => {
+                return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+            }
+        };
+        eprintln!("username got: {}", username);
+        tasks.push(Top3UsersResponse1 {
+            author_username: username,
+            likes_count: record.likes_count,
+        });
+    }
+    (StatusCode::OK, Json(tasks)).into_response()
 }

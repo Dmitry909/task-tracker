@@ -18,11 +18,20 @@ Content-Type: application/json
 
 ###
 POST http://127.0.0.1:4000/create_task
-Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6NywidXNlcm5hbWUiOiJhbGV4MSIsImV4cCI6MTcxODkwMDkxNn0.4vcfFNtRa_G5r-a08SRADeM8o07rvNKpC9Y-SlzpSIw
+Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6OSwidXNlcm5hbWUiOiJhbGV4MSIsImV4cCI6MTcxOTA0NDc2M30.UMueXnsl7jB36vGN9DsbEwLNfsid4L_Z-8lCBSFm7C4
 Content-Type: application/json
 
 {
     "text": "Task text"
+}
+
+###
+POST http://127.0.0.1:4000/like
+Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6OSwidXNlcm5hbWUiOiJhbGV4MSIsImV4cCI6MTcxOTA0NDc2M30.UMueXnsl7jB36vGN9DsbEwLNfsid4L_Z-8lCBSFm7C4
+Content-Type: application/json
+
+{
+    "task_id": 7
 }
 
 ###
@@ -45,11 +54,11 @@ Content-Type: application/json
 
 ###
 POST http://127.0.0.1:4000/like
-Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6OCwidXNlcm5hbWUiOiJib2IiLCJleHAiOjE3MTg5MDExMTN9.x9YfwC9E5-BeQ5lqbibX3bJJFxVq25dJ26A1F9XMGUs
+Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6MTAsInVzZXJuYW1lIjoiYm9iIiwiZXhwIjoxNzE5MDQ0ODgzfQ.ipIrDohewTuAbz64-rUCt8S2vd3uitm9Qv1qxfzQ644
 Content-Type: application/json
 
 {
-    "task_id": 20
+    "task_id": 7
 }
 
 ###

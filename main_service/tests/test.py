@@ -2,7 +2,8 @@ from common import *
 import random
 from string import ascii_lowercase, digits, ascii_uppercase
 import json
-
+import time
+import clickhouse_connect
 
 def random_str(length):
     return ''.join(random.choice(ascii_lowercase + digits) for _ in range(length))
@@ -84,6 +85,8 @@ def test_like_view():
     assert like(task_id1, token).status_code == 200
     assert like(100500, token).status_code == 500 # TODO исправить на 404
 
+    print('test_like_view OK')
+
 
 def test_stat():
     hc_resp = healthcheck_stat()
@@ -92,7 +95,68 @@ def test_stat():
     print('test_stat OK')
 
 
-test_signup_login_update()
-test_tasks()
-test_like_view()
-test_stat()
+def test_aggregate():
+    client = clickhouse_connect.get_client(host='localhost')
+    client.command('TRUNCATE TABLE likes')
+
+    usernames = [random_str(10) for _ in range(5)]
+    password = 'aaaaaA1*'
+
+    tokens = []
+    for username in usernames:
+        signup(username, password)
+        tokens.append(login(username, password).headers["Authorization"])
+
+    task_id1_1 = json.loads(create_task('task text', tokens[0]).text)["task_id"]
+    task_id2_1 = json.loads(create_task('task text', tokens[1]).text)["task_id"]
+    task_id2_2 = json.loads(create_task('task text', tokens[1]).text)["task_id"]
+
+    for token in tokens:
+        like(task_id1_1, token)
+    for token in tokens:
+        like(task_id1_1, token)
+    view(task_id1_1, tokens[0])
+
+    for token in tokens[:4]:
+        like(task_id2_1, token)
+    for token in tokens[:3]:
+        like(task_id2_2, token)
+
+    time.sleep(3)
+
+    likes_and_views_resp = likes_and_views(task_id1_1)
+    assert likes_and_views_resp.status_code == 200
+    likes_and_views_dict = json.loads(likes_and_views_resp.text)
+    assert likes_and_views_dict["task_id"] == task_id1_1
+    assert likes_and_views_dict["likes_count"] == 5
+    assert likes_and_views_dict["views_count"] == 1
+
+    most_popular_tasks_resp = most_popular_tasks(sort_by_likes=True)
+    print(most_popular_tasks_resp.status_code)
+    assert most_popular_tasks_resp.status_code == 200
+    most_popular_tasks_list = json.loads(most_popular_tasks_resp.text)
+    assert 3 <= len(most_popular_tasks_list) <= 5
+    assert most_popular_tasks_list[0]["task_id"] == task_id1_1
+    assert most_popular_tasks_list[1]["task_id"] == task_id2_1
+    assert most_popular_tasks_list[2]["task_id"] == task_id2_2
+    assert most_popular_tasks_list[0]["likes_count"] == 5
+    assert most_popular_tasks_list[1]["likes_count"] == 4
+    assert most_popular_tasks_list[2]["likes_count"] == 3
+
+    most_popular_users_resp = most_popular_users()
+    assert most_popular_users_resp.status_code == 200
+    most_popular_users_list = json.loads(most_popular_users_resp.text)
+    assert 2 <= len(most_popular_users_list) <= 3
+    assert most_popular_users_list[0]["author_username"] == usernames[1]
+    assert most_popular_users_list[1]["author_username"] == usernames[0]
+    assert most_popular_users_list[0]["likes_count"] == 7
+    assert most_popular_users_list[1]["likes_count"] == 5
+
+    print('test_aggregate OK')
+
+
+# test_signup_login_update()
+# test_tasks()
+# test_like_view()
+# test_stat()
+test_aggregate()
